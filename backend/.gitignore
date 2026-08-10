@@ -1,0 +1,55 @@
+﻿# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Environment Variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
+.directory
+
+# IDE Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.bak
+
+# Testing
+coverage/
+.nyc_output/
+
+# Production
+build/
+dist/
+
+# Temporary Files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Database Dumps
+*.sql.gz
+backup/
+
+# Sensitive Information
+config/production.js
+secrets/
+private/

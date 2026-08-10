@@ -1,0 +1,37 @@
+﻿
+C:\Users\learn\OneDrive\Desktop\school erp 30-03-2026\src\pages\accounts\AccountsReports.jsx
+  220:36  error  Parsing error: Unexpected token async
+
+C:\Users\learn\OneDrive\Desktop\school erp 30-03-2026\src\pages\admin\AdminMarksManagement.jsx
+  256:27  error  Parsing error: Cannot use keyword 'await' outside an async function
+
+C:\Users\learn\OneDrive\Desktop\school erp 30-03-2026\src\pages\admin\AdminNonTeachingStaffAttendance.jsx
+  240:27  error  Parsing error: Cannot use keyword 'await' outside an async function
+
+C:\Users\learn\OneDrive\Desktop\school erp 30-03-2026\src\pages\admin\AdminTeacherAttendance.jsx
+  250:27  error  Parsing error: Cannot use keyword 'await' outside an async function
+
+C:\Users\learn\OneDrive\Desktop\school erp 30-03-2026\src\pages\admin\DriverAttendance.jsx
+  250:27  error  Parsing error: Cannot use keyword 'await' outside an async function
+
+C:\Users\learn\OneDrive\Desktop\school erp 30-03-2026\src\pages\admin\MarksheetTemplateEditor.jsx
+  305:27  error  Parsing error: Cannot use keyword 'await' outside an async function
+
+C:\Users\learn\OneDrive\Desktop\school erp 30-03-2026\src\pages\admin\StudentAttendanceReport.jsx
+  1001:17  error  Parsing error: Identifier 'jsPDF' has already been declared
+
+C:\Users\learn\OneDrive\Desktop\school erp 30-03-2026\src\pages\admin\StudentManagement.jsx
+  732:31  error  Parsing error: Cannot use keyword 'await' outside an async function
+
+C:\Users\learn\OneDrive\Desktop\school erp 30-03-2026\src\pages\admin\TeacherManagement.jsx
+  326:31  error  Parsing error: Cannot use keyword 'await' outside an async function
+
+C:\Users\learn\OneDrive\Desktop\school erp 30-03-2026\src\pages\student\StudentCards.jsx
+  519:4  error  Unnecessary escape character: \/  no-useless-escape
+
+C:\Users\learn\OneDrive\Desktop\school erp 30-03-2026\src\pages\student\StudentMarksheets.jsx
+  23:8   warning  React Hook useEffect has a missing dependency: 'fetchMarksheets'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  75:53  error    Unnecessary escape character: \/                                                                                    no-useless-escape
+
+Γ£û 12 problems (11 errors, 1 warning)
+
