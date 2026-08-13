@@ -1,1 +1,7 @@
-
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/cdjgu23h2od/public_html/luhs.learninghub.in/
+    - npm install
+    - npm run build
+    - /bin/cp -R dist/. $DEPLOYPATH
