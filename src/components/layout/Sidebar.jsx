@@ -251,7 +251,14 @@ const Sidebar = ({
                     { name: 'Shift Time', path: '/admin/nonteaching-staff-shift-time', icon: '⏰' },
                 ],
             },
-            { name: 'Fee Management', path: '/admin/fees', icon: '💰' },
+            {
+                name: 'Fees Management', icon: '💰',
+                submenu: [
+                    { name: 'Fee Structure & Collect', path: '/admin/fees', icon: '💰' },
+                    { name: 'Student Fee Setup & Custom Discounts', path: '/admin/fee-student-setup', icon: '🏷️' },
+                    { name: 'Fee Transaction History', path: '/admin/fee-transactions', icon: '📜' },
+                ],
+            },
             {
                 name: 'Certificate', icon: '📜',
                 submenu: [

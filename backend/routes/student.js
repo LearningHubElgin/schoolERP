@@ -346,14 +346,51 @@ router.get('/fees', roleMiddleware('student'), async (req, res) => {
             }
         } catch (e) { /* store_bills may not exist yet or error */ }
 
+        // Fetch school fee_collection_cycle
+        const [schools] = await db.query(
+            'SELECT fee_collection_cycle FROM schools WHERE id = ?',
+            [schoolId]
+        );
+        const feeCollectionCycle = schools[0]?.fee_collection_cycle || 'monthly';
+
+        // Fetch custom fee discount for this student
+        let studentDiscount = null;
+        try {
+            const [discounts] = await db.query(
+                'SELECT * FROM student_fee_discounts WHERE student_id = ? AND school_id = ?',
+                [studentId, schoolId]
+            );
+            if (discounts.length > 0) {
+                studentDiscount = discounts[0];
+            }
+        } catch (e) {}
+
+        // Calculate discount amount and effective totals
+        let discountAmount = 0;
+        if (studentDiscount && parseFloat(studentDiscount.discount_value) > 0 && totalBilled > 0) {
+            if (studentDiscount.discount_type === 'percentage') {
+                discountAmount = Math.round((totalBilled * parseFloat(studentDiscount.discount_value)) / 100);
+            } else {
+                discountAmount = Math.min(parseFloat(studentDiscount.discount_value), totalBilled);
+            }
+        }
+        const effectiveTotal = totalBilled - discountAmount;
+        const effectivePending = effectiveTotal - totalPaid;
+
         const response = {
             success: true,
+            feeCollectionCycle,
+            studentDiscount,
+            discountAmount,
+            effectiveTotal,
             feeStructure,
             feeRecords: currentClassRecords,
             feeRecord: { // aggregated object for frontend
                 total_amount: totalBilled,
                 paid_amount: totalPaid,
-                pending_amount: totalPending
+                pending_amount: effectivePending,
+                discount_amount: discountAmount,
+                effective_total: effectiveTotal
             },
             payments,
             totalPaid,

@@ -1951,66 +1951,70 @@ router.put('/students/:id/promote', async (req, res) => {
         const nextClass = String(currentNum + 1);
 
         // 3. Check if CURRENT CLASS fees are cleared
-        // Get current class name from classes table
-        const [currentClassData] = await db.query(
-            'SELECT name FROM classes WHERE class_number = ? AND school_id = ?',
-            [currentClass, schoolId]
+        const [schools] = await db.query('SELECT fee_collection_cycle FROM schools WHERE id = ?', [schoolId]);
+        const feeCollectionCycle = schools[0]?.fee_collection_cycle || 'monthly';
+
+        // Get class_id and total_fee structure for student's class
+        const [classData] = await db.query(
+            'SELECT c.id FROM classes c WHERE (c.class_number = ? OR c.name = ?) AND c.school_id = ?',
+            [currentClass, currentClass, schoolId]
         );
-        const currentClassName = currentClassData.length > 0 ? currentClassData[0].name : null;
-
-        // Fee check using the same ledger-style calculation as accounts page:
-        // Group by fee_type, use MAX(total_amount) for bill, SUM(paid_amount) for payments, then sum across groups
-        // Use case-insensitive matching for class name
-        let feeCheckQuery = `
-            SELECT fee_type, academic_year,
-                   MAX(total_amount) as bill_total, 
-                   COALESCE(SUM(paid_amount), 0) as total_paid
-            FROM fee_records 
-            WHERE student_id = ? AND school_id = ?
-              AND (LOWER(class_name) = LOWER(?) OR class_name = ? OR LOWER(class_name) = LOWER(CONCAT('class ', ?)))
-            GROUP BY fee_type, academic_year`;
-        const feeCheckParams = [studentId, schoolId, currentClassName || currentClass, currentClass, currentClass];
-
-        const [feeCheckRows] = await db.query(feeCheckQuery, feeCheckParams);
         
-        let totalBilled = 0;
-        let totalPaid = 0;
-        for (const row of feeCheckRows) {
-            totalBilled += parseFloat(row.bill_total || 0);
-            totalPaid += parseFloat(row.total_paid || 0);
-        }
-        const pendingAmount = totalBilled - totalPaid;
-
-        // Also check if fee_structure exists but no record was created
-        if (totalBilled === 0) {
-            const [classData] = await db.query(
-                'SELECT c.id FROM classes c WHERE c.class_number = ? AND c.school_id = ?',
-                [currentClass, schoolId]
-            );
-            if (classData.length > 0) {
-                // Filter by student's stream_id if they have one, otherwise check general (stream_id=0)
-                let fsQuery = 'SELECT total_fee FROM fee_structures WHERE class_id = ? AND school_id = ?';
-                const fsParams = [classData[0].id, schoolId];
-                if (student.stream_id) {
-                    fsQuery += ' AND stream_id = ?';
-                    fsParams.push(student.stream_id);
-                } else {
-                    fsQuery += ' AND (stream_id = 0 OR stream_id IS NULL)';
-                }
-                const [fsCheck] = await db.query(fsQuery, fsParams);
-                if (fsCheck.length > 0 && parseFloat(fsCheck[0].total_fee) > 0) {
-                    return res.status(400).json({
-                        success: false,
-                        message: `Student has pending fee of ₹${fsCheck[0].total_fee} from fee structure. Please collect or create a fee record first.`
-                    });
-                }
+        let baseMonthlyFee = 0;
+        if (classData.length > 0) {
+            let fsQuery = 'SELECT total_fee FROM fee_structures WHERE class_id = ? AND school_id = ?';
+            const fsParams = [classData[0].id, schoolId];
+            if (student.stream_id) {
+                fsQuery += ' AND (stream_id = ? OR stream_id = 0 OR stream_id IS NULL)';
+                fsParams.push(student.stream_id);
+            }
+            const [fsCheck] = await db.query(fsQuery, fsParams);
+            if (fsCheck.length > 0) {
+                baseMonthlyFee = parseFloat(fsCheck[0].total_fee || 0);
             }
         }
+
+        // Get student custom discount/concession & applicable months
+        const [discountRows] = await db.query(
+            'SELECT discount_type, discount_value, applicable_months FROM student_fee_discounts WHERE student_id = ? AND school_id = ?',
+            [studentId, schoolId]
+        );
+
+        let concession = 0;
+        let monthsCount = 12;
+
+        if (discountRows.length > 0) {
+            const disc = discountRows[0];
+            const dVal = parseFloat(disc.discount_value || 0);
+            if (disc.discount_type === 'percentage') {
+                concession = (baseMonthlyFee * dVal) / 100;
+            } else {
+                concession = dVal;
+            }
+            if (disc.applicable_months) {
+                try {
+                    const parsed = typeof disc.applicable_months === 'string' ? JSON.parse(disc.applicable_months) : disc.applicable_months;
+                    if (Array.isArray(parsed) && parsed.length > 0) monthsCount = parsed.length;
+                } catch (e) {}
+            }
+        }
+
+        const netMonthlyFee = Math.max(0, baseMonthlyFee - concession);
+        const totalAnnualRequired = feeCollectionCycle === 'monthly' ? (netMonthlyFee * monthsCount) : netMonthlyFee;
+
+        // Sum payments recorded in fee_records
+        const [paidRows] = await db.query(
+            'SELECT COALESCE(SUM(paid_amount), 0) as total_paid FROM fee_records WHERE student_id = ? AND school_id = ?',
+            [studentId, schoolId]
+        );
+        const totalPaid = parseFloat(paidRows[0]?.total_paid || 0);
+
+        const pendingAmount = Math.max(0, totalAnnualRequired - totalPaid);
 
         if (pendingAmount > 0) {
             return res.status(400).json({
                 success: false,
-                message: `Student has ₹${pendingAmount.toFixed(2)} pending fees. Please clear all fees before promotion.`
+                message: `Student has ₹${pendingAmount.toFixed(2)} pending fees for current class. Please clear all fees before promotion.`
             });
         }
 
@@ -6798,6 +6802,23 @@ router.post('/settings/attendance', async (req, res) => {
     }
 });
 
+// @route   GET /api/admin/settings
+// @desc    Get general school settings and details
+// @access  Private (Admin)
+router.get('/settings', authMiddleware, async (req, res) => {
+    try {
+        const schoolId = req.user.school_id;
+        const [schoolRows] = await db.query(
+            `SELECT * FROM schools WHERE id = ?`,
+            [schoolId]
+        );
+        res.json({ success: true, school: schoolRows[0] || null });
+    } catch (error) {
+        console.error('Get school settings error:', error);
+        res.status(500).json({ success: false, message: 'Server error loading school settings' });
+    }
+});
+
 // @route   GET /api/admin/settings/attendance
 // @desc    Get school attendance settings
 // @access  Private (Admin)
@@ -10220,6 +10241,299 @@ router.get('/passed-out-stats', async (req, res) => {
     } catch (error) {
         console.error('Get passed out stats error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   GET /api/admin/academic/classes
+// @desc    Get all classes for school
+router.get('/academic/classes', authMiddleware, async (req, res) => {
+    try {
+        const schoolId = req.user.school_id;
+        const [classes] = await db.query('SELECT * FROM classes WHERE school_id = ? ORDER BY CAST(class_number AS UNSIGNED) ASC, class_number ASC', [schoolId]);
+        res.json({ success: true, classes });
+    } catch (error) {
+        console.error('Get classes error:', error);
+        res.status(500).json({ success: false, message: 'Server error loading classes' });
+    }
+});
+
+// @route   GET /api/admin/academic/sections/:classNum
+// @desc    Get sections for a class
+router.get('/academic/sections/:classNum', authMiddleware, async (req, res) => {
+    try {
+        const schoolId = req.user.school_id;
+        const [sections] = await db.query('SELECT * FROM sections WHERE school_id = ? ORDER BY name ASC', [schoolId]);
+        res.json({ 
+            success: true, 
+            sections: sections.map(s => ({ 
+                id: s.id, 
+                name: s.name || s.code, 
+                section_code: s.code || s.name || s.section_code 
+            })) 
+        });
+    } catch (error) {
+        console.error('Get sections error:', error);
+        res.status(500).json({ success: false, message: 'Server error loading sections' });
+    }
+});
+
+// @route   GET /api/admin/fees/transactions
+// @desc    Get all fee transaction history for school
+router.get('/fees/transactions', authMiddleware, roleMiddleware('admin', 'accountant'), async (req, res) => {
+    try {
+        const schoolId = req.user.school_id;
+        const { search, class_name, section, payment_mode, date_from, date_to, status } = req.query;
+
+        let query = `
+            SELECT 
+                fr.id,
+                fr.student_id,
+                fr.fee_type,
+                fr.class_name,
+                fr.total_amount,
+                fr.paid_amount,
+                fr.pending_amount,
+                fr.status,
+                fr.payment_date,
+                COALESCE(fr.payment_method, 'Cash') as payment_mode,
+                COALESCE(fr.transaction_id, CONCAT('REC-', fr.id)) as receipt_no,
+                s.student_name,
+                s.student_unique_id,
+                s.roll_no,
+                s.class as student_class,
+                s.section as student_section,
+                s.father_name,
+                s.father_phone,
+                u.name as received_by_name
+            FROM fee_records fr
+            JOIN students s ON fr.student_id = s.id
+            LEFT JOIN users u ON fr.received_by = u.id
+            WHERE fr.school_id = ?
+        `;
+        const params = [schoolId];
+
+        if (search && search.trim()) {
+            const searchTerm = `%${search.trim()}%`;
+            query += ` AND (s.student_name LIKE ? OR s.student_unique_id LIKE ? OR s.roll_no LIKE ? OR fr.transaction_id LIKE ? OR fr.fee_type LIKE ?)`;
+            params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+        }
+        if (class_name && class_name.trim()) {
+            query += ` AND (fr.class_name = ? OR s.class = ?)`;
+            params.push(class_name.trim(), class_name.trim());
+        }
+        if (section && section.trim()) {
+            query += ` AND s.section = ?`;
+            params.push(section.trim());
+        }
+        if (payment_mode && payment_mode.trim()) {
+            query += ` AND (fr.payment_method LIKE ? OR fr.payment_method = ?)`;
+            params.push(`%${payment_mode.trim()}%`, payment_mode.trim());
+        }
+        if (status && status.trim()) {
+            query += ` AND fr.status = ?`;
+            params.push(status.trim());
+        }
+        if (date_from) {
+            query += ` AND DATE(fr.payment_date) >= ?`;
+            params.push(date_from);
+        }
+        if (date_to) {
+            query += ` AND DATE(fr.payment_date) <= ?`;
+            params.push(date_to);
+        }
+
+        query += ` ORDER BY fr.payment_date DESC, fr.id DESC`;
+
+        const [transactions] = await db.query(query, params);
+
+        const [statsRows] = await db.query(`
+            SELECT 
+                COALESCE(SUM(paid_amount), 0) as total_paid,
+                COALESCE(SUM(pending_amount), 0) as total_pending,
+                COUNT(CASE WHEN paid_amount > 0 THEN 1 END) as total_transactions
+            FROM fee_records 
+            WHERE school_id = ?
+        `, [schoolId]);
+
+        res.json({
+            success: true,
+            transactions,
+            stats: statsRows[0] || { total_paid: 0, total_pending: 0, total_transactions: 0 }
+        });
+    } catch (error) {
+        console.error('Get fee transactions error:', error);
+        res.status(500).json({ success: false, message: 'Server error loading fee transactions' });
+    }
+});
+
+// @route   GET /api/admin/fees/student-discounts
+// @desc    Get all student fee setup discounts
+router.get('/fees/student-discounts', authMiddleware, roleMiddleware('admin', 'accountant'), async (req, res) => {
+    try {
+        const schoolId = req.user.school_id;
+        const { class_number, section, search } = req.query;
+
+
+
+        let query = `
+            SELECT 
+                s.id as student_id,
+                s.student_name,
+                s.student_unique_id,
+                s.roll_no,
+                s.class,
+                s.section,
+                s.father_name,
+                s.phone,
+                s.father_phone,
+                s.stream_id,
+                sfd.id as discount_id,
+                sfd.discount_type,
+                sfd.discount_value,
+                sfd.frequency,
+                sfd.reason,
+                sfd.applicable_months,
+                sfd.notes,
+                sfd.updated_at as discount_updated_at,
+                COALESCE(fs.total_fee, 0) as base_monthly_fee
+            FROM students s
+            LEFT JOIN classes c ON (
+                c.school_id = s.school_id 
+                AND (
+                    c.class_number = s.class 
+                    OR c.name = s.class 
+                    OR c.class_number = REPLACE(s.class, 'Class ', '')
+                )
+            )
+            LEFT JOIN fee_structures fs ON (
+                fs.school_id = s.school_id 
+                AND fs.class_id = c.id 
+                AND (fs.stream_id IS NULL OR fs.stream_id = s.stream_id OR s.stream_id IS NULL)
+            )
+            LEFT JOIN student_fee_discounts sfd ON s.id = sfd.student_id AND sfd.school_id = s.school_id
+            WHERE s.school_id = ? AND s.status != 'passed_out'
+        `;
+        const params = [schoolId];
+
+        if (class_number && class_number.trim()) {
+            const cls = class_number.trim();
+            const cleanCls = cls.replace(/^Class\s+/i, '');
+            query += ` AND (s.class = ? OR s.class = ? OR s.class = ? OR s.class LIKE ?)`;
+            params.push(cls, cleanCls, `Class ${cleanCls}`, `${cleanCls}%`);
+        }
+        if (section && section.trim()) {
+            const sec = section.trim();
+            query += ` AND (s.section = ? OR s.class LIKE ?)`;
+            params.push(sec, `%-${sec}`);
+        }
+        if (search && search.trim()) {
+            const searchTerm = `%${search.trim()}%`;
+            query += ` AND (s.student_name LIKE ? OR s.student_unique_id LIKE ? OR s.roll_no LIKE ?)`;
+            params.push(searchTerm, searchTerm, searchTerm);
+        }
+
+        query += ` ORDER BY s.class ASC, s.section ASC, CAST(s.roll_no AS UNSIGNED) ASC, s.student_name ASC`;
+
+        const [studentsWithDiscounts] = await db.query(query, params);
+
+        res.json({ success: true, students: studentsWithDiscounts });
+    } catch (error) {
+        console.error('Get student fee discounts error:', error);
+        res.status(500).json({ success: false, message: 'Server error loading student fee setups' });
+    }
+});
+
+// @route   POST /api/admin/fees/student-discounts
+// @desc    Save/update student fee discount setup
+router.post('/fees/student-discounts', authMiddleware, roleMiddleware('admin', 'accountant'), async (req, res) => {
+    try {
+        const schoolId = req.user.school_id;
+        const { student_id, discount_type, discount_value, frequency, reason, applicable_months, notes } = req.body;
+
+        if (!student_id) {
+            return res.status(400).json({ success: false, message: 'Student ID is required' });
+        }
+
+        const parsedValue = parseFloat(discount_value) || 0;
+        const monthsStr = Array.isArray(applicable_months) ? JSON.stringify(applicable_months) : (applicable_months || 'All');
+
+        await db.query(`
+            INSERT INTO student_fee_discounts 
+                (school_id, student_id, discount_type, discount_value, frequency, reason, applicable_months, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE 
+                discount_type = VALUES(discount_type),
+                discount_value = VALUES(discount_value),
+                frequency = VALUES(frequency),
+                reason = VALUES(reason),
+                applicable_months = VALUES(applicable_months),
+                notes = VALUES(notes)
+        `, [
+            schoolId,
+            student_id,
+            discount_type || 'flat',
+            parsedValue,
+            frequency || 'monthly',
+            reason || 'Custom Discount',
+            monthsStr,
+            notes || null
+        ]);
+
+        res.json({ success: true, message: 'Student fee discount setup saved successfully' });
+    } catch (error) {
+        console.error('Save student fee discount error:', error);
+        res.status(500).json({ success: false, message: 'Server error saving student fee setup' });
+    }
+});
+
+// @route   DELETE /api/admin/fees/student-discounts/:studentId
+// @desc    Delete custom discount setup for a student
+router.delete('/fees/student-discounts/:studentId', authMiddleware, roleMiddleware('admin', 'accountant'), async (req, res) => {
+    try {
+        const schoolId = req.user.school_id;
+        await db.query('DELETE FROM student_fee_discounts WHERE student_id = ? AND school_id = ?', [req.params.studentId, schoolId]);
+        res.json({ success: true, message: 'Student fee discount setup removed' });
+    } catch (error) {
+        console.error('Delete student fee discount error:', error);
+        res.status(500).json({ success: false, message: 'Server error removing discount setup' });
+    }
+});
+
+// @route   POST /api/admin/fees/student-discounts/batch-months
+// @desc    Batch set applicable academic months for students
+router.post('/fees/student-discounts/batch-months', authMiddleware, roleMiddleware('admin', 'accountant'), async (req, res) => {
+    try {
+        const schoolId = req.user.school_id;
+        const { class_number, applicable_months } = req.body;
+
+        const monthsStr = Array.isArray(applicable_months) ? JSON.stringify(applicable_months) : JSON.stringify(applicable_months || []);
+
+        let studentQuery = 'SELECT id FROM students WHERE school_id = ?';
+        let queryParams = [schoolId];
+
+        if (class_number && String(class_number).trim()) {
+            const cls = String(class_number).trim();
+            const cleanCls = cls.replace(/^Class\s+/i, '').replace(/\s+Only$/i, '').trim();
+            studentQuery += ' AND (class = ? OR class = ? OR class = ? OR class LIKE ?)';
+            queryParams.push(cls, cleanCls, `Class ${cleanCls}`, `${cleanCls}%`);
+        }
+
+        const [students] = await db.query(studentQuery, queryParams);
+
+        if (students.length > 0) {
+            for (const s of students) {
+                await db.query(`
+                    INSERT INTO student_fee_discounts (school_id, student_id, applicable_months)
+                    VALUES (?, ?, ?)
+                    ON DUPLICATE KEY UPDATE applicable_months = VALUES(applicable_months)
+                `, [schoolId, s.id, monthsStr]);
+            }
+        }
+
+        res.json({ success: true, message: `Applicable academic months set for ${students.length} students` });
+    } catch (error) {
+        console.error('Batch update applicable months error:', error);
+        res.status(500).json({ success: false, message: 'Server error setting applicable months' });
     }
 });
 

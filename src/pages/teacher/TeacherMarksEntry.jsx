@@ -363,7 +363,7 @@ const TeacherMarksEntry = () => {
                                         <div>
                                             <h3 className="font-bold text-slate-800 text-lg">{a.subject_name}</h3>
                                             <p className="text-sm text-slate-500 mt-1">
-                                                Class {a.class}{a.section ? `-${a.section}` : ''}
+                                                Class {String(a.class || '').replace(/^Class\s+/i, '')}{a.section ? `-Section ${String(a.section || '').replace(/^Section\s+/i, '')}` : ''}
                                             </p>
                                         </div>
                                         <div className="flex flex-col items-end gap-1">

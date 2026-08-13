@@ -4,6 +4,7 @@ import { API_URL } from '../../productionLink/productionLink';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import Table from '../../components/ui/Table';
 import EventsNoticesSection from '../../components/ui/EventsNoticesSection';
 
 const AdmissionDashboard = () => {
@@ -27,17 +28,11 @@ const AdmissionDashboard = () => {
 
     const fetchDashboardData = async () => {
         try {
-            // Get school_id from localStorage (set during login as 'schoolId')
             const schoolId = localStorage.getItem('schoolId');
-            console.log('🔍 schoolId from localStorage:', schoolId);
-
             const queryParam = schoolId ? `?school_id=${schoolId}` : '';
-            console.log('🔍 Query param to send:', queryParam);
 
             // Fetch stats
             const statsUrl = `${API_URL}/api/admission/dashboard${queryParam}`;
-            console.log('🔍 Fetching stats from:', statsUrl);
-
             const statsResponse = await fetch(statsUrl);
             const statsData = await statsResponse.json();
 
@@ -47,8 +42,6 @@ const AdmissionDashboard = () => {
 
             // Fetch recent applications
             const appsUrl = `${API_URL}/api/admission/recent-applications${queryParam}`;
-            console.log('🔍 Fetching apps from:', appsUrl);
-
             const appsResponse = await fetch(appsUrl);
             const appsData = await appsResponse.json();
 
@@ -77,224 +70,195 @@ const AdmissionDashboard = () => {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto"></div>
-                    <p className="mt-4 text-slate-500">Loading dashboard...</p>
+    const columns = [
+        {
+            header: 'App No',
+            render: (row) => (
+                <span className="font-bold text-slate-700 text-xs">#{row.application_no}</span>
+            )
+        },
+        {
+            header: 'Student Name',
+            render: (row) => (
+                <div>
+                    <span className="font-bold text-slate-900 text-xs block">{row.student_name}</span>
+                    {row.phone && <span className="text-[10px] text-slate-400 block">{row.phone}</span>}
                 </div>
-            </div>
-        );
-    }
-
-    // Helper Stat Card
-    const StatCard = ({ title, value, icon, color, subValue }) => (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center group hover:shadow-md transition-shadow relative overflow-hidden">
-            <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-${color}-500 opacity-5 rounded-full blur-2xl group-hover:opacity-10 transition-opacity`}></div>
-            <div className={`p-4 bg-${color}-50 rounded-full text-${color}-600 mb-3`}>
-                {icon}
-            </div>
-            <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{title}</p>
-            <h3 className="text-3xl font-bold text-slate-800 mt-1">{value}</h3>
-            {subValue && <p className={`text-xs mt-1 font-medium text-${color}-600`}>{subValue}</p>}
-        </div>
-    );
+            )
+        },
+        {
+            header: 'Class',
+            render: (row) => (
+                <span className="text-xs font-semibold text-slate-700">Class {row.class}</span>
+            )
+        },
+        {
+            header: 'Date Applied',
+            render: (row) => (
+                <div>
+                    <span className="text-xs font-medium text-slate-700 block">{new Date(row.applied_date).toLocaleDateString()}</span>
+                    <span className="text-[10px] text-slate-400 block">
+                        {row.created_at ? new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : ''}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Status',
+            render: (row) => (
+                <Badge variant={getStatusBadge(row.status)} size="sm">
+                    {row.status ? row.status.charAt(0).toUpperCase() + row.status.slice(1) : 'Pending'}
+                </Badge>
+            )
+        },
+        {
+            header: 'Action',
+            render: (row) => (
+                <button
+                    onClick={() => navigate(`/admission/applications/${row.id}`)}
+                    className="px-2 py-1 sm:px-2.5 sm:py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md sm:rounded-lg text-[10px] sm:text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                >
+                    View Details
+                </button>
+            )
+        }
+    ];
 
     return (
-        <div className="space-y-4 md:space-y-8 pb-8">
+        <div className="space-y-2.5 sm:space-y-3.5 pb-6">
             {/* Header Banner */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 p-4 md:p-8 text-white shadow-xl md:shadow-2xl">
-                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h1 className="text-xl md:text-3xl font-bold tracking-tight">Admission Portal 🎓</h1>
-                        <p className="mt-2 text-cyan-100 text-sm md:text-lg">
-                            Manage student applications, admissions, and enrollment processes.
-                        </p>
-                    </div>
-                    <div className="flex gap-3">
-                        <Button
-                            variant="secondary"
-                            className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 backdrop-blur-sm"
-                            onClick={() => navigate('/admission/new-application')}
-                        >
-                            + New Application
-                        </Button>
-                    </div>
+            <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 p-2.5 sm:p-5 text-white shadow-md sm:shadow-lg flex flex-row items-center justify-between gap-2 sm:gap-3">
+                <div className="relative z-10">
+                    <h1 className="text-xs sm:text-xl font-bold tracking-tight flex items-center gap-1.5 sm:gap-2">
+                        <span className="text-sm sm:text-xl">🎓</span> Admission Dashboard
+                    </h1>
+                    <p className="mt-0.5 text-blue-100 text-[9px] sm:text-xs font-medium hidden xs:block">
+                        Manage student applications, admissions, and enrollment processes
+                    </p>
                 </div>
-                {/* Decorative background circles */}
-                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-white opacity-10 blur-3xl"></div>
-                <div className="absolute bottom-0 right-20 -mb-20 w-60 h-60 rounded-full bg-blue-400 opacity-20 blur-3xl"></div>
+                <button
+                    onClick={() => navigate('/admission/new-application')}
+                    className="px-2 py-1 sm:px-4 sm:py-2 bg-white text-indigo-700 hover:bg-blue-50 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-extrabold transition-all shadow-sm shrink-0 flex items-center gap-1 cursor-pointer border border-white/40"
+                >
+                    <span>➕</span> <span className="hidden xs:inline">New Application</span><span className="xs:hidden">New App</span>
+                </button>
+                {/* Decorative background glow */}
+                <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
             </div>
 
-            {/* Global Error is handled by Layout context overlay */}
-
-
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-                <StatCard
-                    title="Total Applications"
-                    value={stats.totalApplications}
-                    icon={<span className="text-2xl">📋</span>}
-                    color="blue"
-                />
-                <StatCard
-                    title="Pending Review"
-                    value={stats.pendingReview}
-                    icon={<span className="text-2xl">⏳</span>}
-                    color="orange"
-                    subValue={stats.pendingReview > 0 ? "Needs Action" : "All Clear"}
-                />
-                <StatCard
-                    title="Admitted Today"
-                    value={stats.admittedToday}
-                    icon={<span className="text-2xl">🎉</span>}
-                    color="green"
-                />
-                <StatCard
-                    title="Rejected (Week)"
-                    value={stats.rejectedThisWeek}
-                    icon={<span className="text-2xl">❌</span>}
-                    color="red"
-                />
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                <Card className="!p-0 !bg-gradient-to-r !from-indigo-50/90 !via-indigo-50/40 !to-white !border-indigo-200/90 !border-l-[4px] !border-l-indigo-600 hover:!border-indigo-400 transition-all shadow-2xs">
+                    <div className="p-2.5 sm:p-3.5 flex items-center justify-between gap-1.5">
+                        <div>
+                            <p className="text-xs sm:text-xs font-bold text-indigo-950 tracking-tight leading-tight">Total Applications</p>
+                            <p className="text-lg sm:text-2xl font-bold text-indigo-700 mt-1 leading-none">
+                                {stats.totalApplications}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-indigo-700/80 font-medium mt-1">All time submissions</p>
+                        </div>
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-indigo-100/90 border border-indigo-300 text-indigo-700 font-bold text-sm sm:text-lg flex items-center justify-center shrink-0 shadow-2xs">📋</div>
+                    </div>
+                </Card>
+
+                <Card className="!p-0 !bg-gradient-to-r !from-amber-50/90 !via-amber-50/40 !to-white !border-amber-200/90 !border-l-[4px] !border-l-amber-500 hover:!border-amber-400 transition-all shadow-2xs">
+                    <div className="p-2.5 sm:p-3.5 flex items-center justify-between gap-1.5">
+                        <div>
+                            <p className="text-xs sm:text-xs font-bold text-amber-950 tracking-tight leading-tight">Pending Review</p>
+                            <p className="text-lg sm:text-2xl font-bold text-amber-700 mt-1 leading-none">
+                                {stats.pendingReview}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-amber-700/80 font-medium mt-1">
+                                {stats.pendingReview > 0 ? "Needs Action" : "All Clear"}
+                            </p>
+                        </div>
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-amber-100/90 border border-amber-300 text-amber-700 font-bold text-sm sm:text-lg flex items-center justify-center shrink-0 shadow-2xs">⏳</div>
+                    </div>
+                </Card>
+
+                <Card className="!p-0 !bg-gradient-to-r !from-emerald-50/90 !via-emerald-50/40 !to-white !border-emerald-200/90 !border-l-[4px] !border-l-emerald-600 hover:!border-emerald-400 transition-all shadow-2xs">
+                    <div className="p-2.5 sm:p-3.5 flex items-center justify-between gap-1.5">
+                        <div>
+                            <p className="text-xs sm:text-xs font-bold text-emerald-950 tracking-tight leading-tight">Admitted Today</p>
+                            <p className="text-lg sm:text-2xl font-bold text-emerald-700 mt-1 leading-none">
+                                {stats.admittedToday}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-emerald-700/80 font-medium mt-1">Today's admissions</p>
+                        </div>
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-100/90 border border-emerald-300 text-emerald-700 font-bold text-sm sm:text-lg flex items-center justify-center shrink-0 shadow-2xs">🎉</div>
+                    </div>
+                </Card>
+
+                <Card className="!p-0 !bg-gradient-to-r !from-rose-50/90 !via-rose-50/40 !to-white !border-rose-200/90 !border-l-[4px] !border-l-rose-500 hover:!border-rose-400 transition-all shadow-2xs">
+                    <div className="p-2.5 sm:p-3.5 flex items-center justify-between gap-1.5">
+                        <div>
+                            <p className="text-xs sm:text-xs font-bold text-rose-950 tracking-tight leading-tight">Rejected (Week)</p>
+                            <p className="text-lg sm:text-2xl font-bold text-rose-700 mt-1 leading-none">
+                                {stats.rejectedThisWeek}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-rose-700/80 font-medium mt-1">This week total</p>
+                        </div>
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-rose-100/90 border border-rose-300 text-rose-700 font-bold text-sm sm:text-lg flex items-center justify-center shrink-0 shadow-2xs">❌</div>
+                    </div>
+                </Card>
             </div>
 
             {/* Events and Notices Section */}
             <EventsNoticesSection />
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-3">
                 <button
                     onClick={() => navigate('/admission/new-application')}
-                    className="p-6 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-cyan-300 transition-all group text-left"
+                    className="p-2 sm:p-3.5 bg-gradient-to-r from-indigo-50/70 to-white rounded-xl shadow-2xs border border-indigo-200/90 border-l-[4px] border-l-indigo-600 hover:border-indigo-400 transition-all group text-left cursor-pointer"
                 >
-                    <div className="w-12 h-12 bg-cyan-50 rounded-lg flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+                    <div className="w-7 h-7 sm:w-9 sm:h-9 bg-indigo-100/90 border border-indigo-300 rounded-lg flex items-center justify-center text-xs sm:text-lg mb-1.5 sm:mb-2 group-hover:scale-105 transition-transform">
                         ➕
                     </div>
-                    <h4 className="font-bold text-slate-800 text-lg">New Application</h4>
-                    <p className="text-slate-500 text-sm mt-1">Start a new student enrollment process</p>
+                    <h4 className="font-bold text-slate-900 text-xs sm:text-sm">
+                        <span className="hidden sm:inline">New Application</span>
+                        <span className="sm:hidden">New App</span>
+                    </h4>
+                    <p className="text-slate-600 text-[10px] sm:text-xs mt-0.5 font-medium line-clamp-2">Start a new student enrollment process</p>
                 </button>
                 <button
                     onClick={() => navigate('/admission/applications')}
-                    className="p-6 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-blue-300 transition-all group text-left"
+                    className="p-2 sm:p-3.5 bg-gradient-to-r from-emerald-50/70 to-white rounded-xl shadow-2xs border border-emerald-200/90 border-l-[4px] border-l-emerald-600 hover:border-emerald-400 transition-all group text-left cursor-pointer"
                 >
-                    <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+                    <div className="w-7 h-7 sm:w-9 sm:h-9 bg-emerald-100/90 border border-emerald-300 rounded-lg flex items-center justify-center text-xs sm:text-lg mb-1.5 sm:mb-2 group-hover:scale-105 transition-transform">
                         📂
                     </div>
-                    <h4 className="font-bold text-slate-800 text-lg">All Applications</h4>
-                    <p className="text-slate-500 text-sm mt-1">View and manage all received applications</p>
+                    <h4 className="font-bold text-slate-900 text-xs sm:text-sm">
+                        <span className="hidden sm:inline">All Applications</span>
+                        <span className="sm:hidden">All Apps</span>
+                    </h4>
+                    <p className="text-slate-600 text-[10px] sm:text-xs mt-0.5 font-medium line-clamp-2">View and manage all received applications</p>
                 </button>
                 <button
                     onClick={() => navigate('/admission/reports')}
-                    className="p-6 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-purple-300 transition-all group text-left"
+                    className="p-2 sm:p-3.5 bg-gradient-to-r from-amber-50/70 to-white rounded-xl shadow-2xs border border-amber-200/90 border-l-[4px] border-l-amber-500 hover:border-amber-400 transition-all group text-left cursor-pointer"
                 >
-                    <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+                    <div className="w-7 h-7 sm:w-9 sm:h-9 bg-amber-100/90 border border-amber-300 rounded-lg flex items-center justify-center text-xs sm:text-lg mb-1.5 sm:mb-2 group-hover:scale-105 transition-transform">
                         📊
                     </div>
-                    <h4 className="font-bold text-slate-800 text-lg">Reports</h4>
-                    <p className="text-slate-500 text-sm mt-1">Analyze admission trends and statistics</p>
+                    <h4 className="font-bold text-slate-900 text-xs sm:text-sm">
+                        <span className="hidden sm:inline">Admission Reports</span>
+                        <span className="sm:hidden">Reports</span>
+                    </h4>
+                    <p className="text-slate-600 text-[10px] sm:text-xs mt-0.5 font-medium line-clamp-2">Analyze admission trends and statistics</p>
                 </button>
             </div>
 
-            {/* Recent Applications */}
-            <Card title="Recent Applications" subtitle="Latest student applications received" variant="elevated" className="p-0 overflow-hidden border border-slate-200 shadow-md">
-                {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-100">
-                        <thead className="bg-slate-50">
-                            <tr>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">App No</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Student Name</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Class</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date Applied</th>
-                                <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-slate-50">
-                            {recentApplications.length > 0 ? (
-                                recentApplications.map((app) => (
-                                    <tr key={app.id} className="hover:bg-slate-50 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-600">#{app.application_no}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="text-sm font-bold text-slate-800">{app.student_name}</span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                                            Class {app.class}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                                            <div>{new Date(app.applied_date).toLocaleDateString()}</div>
-                                            <div className="text-xs text-slate-400">
-                                                {app.created_at ? new Date(app.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            <Badge variant={getStatusBadge(app.status)}>
-                                                {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            <Button
-                                                variant="secondary"
-                                                size="sm"
-                                                onClick={() => navigate(`/admission/applications/${app.id}`)}
-                                                className="hover:border-blue-300 hover:text-blue-600"
-                                            >
-                                                View Details
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan="6" className="px-6 py-12 text-center text-slate-400">
-                                        No recent applications found
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Mobile Card View */}
-                <div className="md:hidden divide-y divide-slate-100">
-                    {recentApplications.length > 0 ? (
-                        recentApplications.map((app) => (
-                            <div
-                                key={app.id}
-                                className="p-4 bg-white active:bg-slate-50 transition-colors"
-                                onClick={() => navigate(`/admission/applications/${app.id}`)}
-                            >
-                                <div className="flex items-center justify-between mb-3">
-                                    <span className="text-xs font-medium text-slate-400">APP #{app.application_no}</span>
-                                    <Badge variant={getStatusBadge(app.status)} size="sm">
-                                        {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                                    </Badge>
-                                </div>
-                                <h4 className="font-bold text-slate-800 text-lg mb-1">{app.student_name}</h4>
-                                <div className="flex items-center justify-between text-sm text-slate-500 mt-2">
-                                    <span>Class {app.class}</span>
-                                    <span>{new Date(app.applied_date).toLocaleDateString()}</span>
-                                </div>
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    className="w-full mt-4"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/admission/applications/${app.id}`);
-                                    }}
-                                >
-                                    View Application
-                                </Button>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="py-12 text-center text-slate-400 text-sm">
-                            No applications available
-                        </div>
-                    )}
-                </div>
+            {/* Recent Applications Table */}
+            <Card title="Recent Applications" subtitle="Latest student applications received" variant="elevated">
+                <Table
+                    columns={columns}
+                    data={recentApplications}
+                    isLoading={loading}
+                    compact={true}
+                    headerBg="bg-slate-100/90 text-slate-700 font-extrabold"
+                    emptyMessage="No recent applications found."
+                />
             </Card>
         </div>
     );

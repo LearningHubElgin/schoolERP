@@ -9,7 +9,7 @@ const LoginPage = () => {
     useEffect(() => {
         const token = localStorage.getItem('token');
         const userRole = localStorage.getItem('userRole');
-        
+
         if (token && userRole) {
             const roleRedirects = {
                 superadmin: '/superadmin/dashboard',
@@ -128,7 +128,7 @@ const LoginPage = () => {
         e.preventDefault();
         setForgotError('');
         setForgotSuccess('');
-        
+
         if (!forgotEmail) {
             setForgotError('Please enter your email address');
             return;
@@ -183,7 +183,7 @@ const LoginPage = () => {
                 {/* Ambient Background Blur Orbs */}
                 <div className="absolute top-0 left-0 w-80 h-80 bg-emerald-400 opacity-15 rounded-full mix-blend-overlay filter blur-3xl transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
                 <div className="absolute bottom-0 right-0 w-96 h-96 bg-teal-400 opacity-20 rounded-full mix-blend-overlay filter blur-3xl transform translate-x-1/3 translate-y-1/3 pointer-events-none"></div>
-                
+
                 {/* Top Nav Header */}
                 <div className="relative z-20 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
@@ -193,8 +193,8 @@ const LoginPage = () => {
                         <span className="font-extrabold text-base sm:text-lg tracking-tight text-white drop-shadow-sm">School ERP</span>
                     </div>
 
-                    <button 
-                        onClick={() => navigate('/landing')} 
+                    <button
+                        onClick={() => navigate('/landing')}
                         className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white backdrop-blur-md rounded-full px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold border border-white/20 shadow-sm transition-all group cursor-pointer"
                     >
                         <svg className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -281,13 +281,7 @@ const LoginPage = () => {
                                 <label htmlFor="password" className="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200">
                                     Password
                                 </label>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowForgotModal(true)}
-                                    className="text-xs text-teal-600 hover:text-teal-700 dark:text-teal-400 font-bold hover:underline transition-all"
-                                >
-                                    Forgot?
-                                </button>
+
                             </div>
                             <div className="relative rounded-xl shadow-sm group">
                                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-teal-600 transition-colors">
@@ -321,7 +315,15 @@ const LoginPage = () => {
                                         </svg>
                                     )}
                                 </button>
+
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowForgotModal(true)}
+                                className="text-xs text-teal-600 hover:text-teal-700 dark:text-teal-400 font-bold hover:underline transition-all "
+                            >
+                                Forgot?
+                            </button>
                         </div>
 
                         {/* Error Notification */}

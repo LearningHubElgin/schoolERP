@@ -421,8 +421,15 @@ const TeacherStudentManagement = () => {
             });
             const data = await response.json();
             if (data.success) {
+                const newStudentId = data.studentId || data.student?.id;
+                if (selectedPhoto && newStudentId) {
+                    await handlePhotoUpload(newStudentId);
+                }
                 setResultModal({ open: true, title: '✅ Success', message: 'Student added successfully', variant: 'success' });
                 setIsAddModalOpen(false);
+                setSelectedPhoto(null);
+                setPhotoPreview(null);
+                setIsPhotoRemoved(false);
                 setAddFormData({
                     name: '', email: '', phone: '', class: '', section: '', fatherName: '', motherName: '',
                     fatherPhone: '', motherPhone: '', address: '', rollNo: '', dateOfBirth: '', bloodGroup: '', gender: '',
@@ -751,7 +758,7 @@ const TeacherStudentManagement = () => {
                     <h1 className="text-base sm:text-xl md:text-3xl font-medium tracking-tight">Student management (Teacher access) 👨‍🎓</h1>
                     <p className="mt-1 text-indigo-100 text-xs sm:text-sm md:text-lg max-w-2xl">Manage student records, admissions, and academic details efficiently.</p>
                     <div className="mt-3 flex flex-wrap gap-2 sm:gap-3">
-                        <button onClick={() => setIsAddModalOpen(true)} className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white text-indigo-600 rounded-lg text-xs sm:text-sm font-medium hover:bg-opacity-90 transition-all shadow-md active:scale-95">+ Add new student</button>
+                        <button onClick={() => { setSelectedPhoto(null); setPhotoPreview(null); setIsPhotoRemoved(false); setIsAddModalOpen(true); }} className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white text-indigo-600 rounded-lg text-xs sm:text-sm font-medium hover:bg-opacity-90 transition-all shadow-md active:scale-95">+ Add new student</button>
                         <button onClick={fetchStudents} className="px-3 py-1.5 sm:px-4 sm:py-2 bg-indigo-700/40 text-white border border-white/20 rounded-lg text-xs sm:text-sm font-medium hover:bg-opacity-50 transition-all active:scale-95">🔄 Refresh data</button>
                     </div>
                 </div>
@@ -993,8 +1000,69 @@ const TeacherStudentManagement = () => {
             </Modal>
 
             {/* Add Student Modal */}
-            <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add New Student" size="lg" footer={<><Button variant="secondary" onClick={() => setIsAddModalOpen(false)}>Cancel</Button><Button variant="primary" onClick={handleAddStudent} disabled={submitting}>{submitting ? 'Adding...' : 'Add Student'}</Button></>}>
+            <Modal isOpen={isAddModalOpen} onClose={() => { setIsAddModalOpen(false); setSelectedPhoto(null); setPhotoPreview(null); setIsPhotoRemoved(false); }} title="Add New Student" size="lg" footer={<><Button variant="secondary" onClick={() => { setIsAddModalOpen(false); setSelectedPhoto(null); setPhotoPreview(null); setIsPhotoRemoved(false); }}>Cancel</Button><Button variant="primary" onClick={handleAddStudent} disabled={submitting}>{submitting ? 'Adding...' : 'Add Student'}</Button></>}>
                 <div className="flex flex-wrap gap-x-[6%] gap-y-1">
+                    {/* Profile Photo & Camera Section */}
+                    <div className="w-full flex flex-col items-center justify-center p-3 bg-slate-50 border border-slate-200 rounded-xl mb-3">
+                        <div className="relative mb-2">
+                            {photoPreview ? (
+                                <img
+                                    src={photoPreview}
+                                    alt="Student Profile Preview"
+                                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-indigo-600 shadow-md"
+                                />
+                            ) : (
+                                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-slate-200 border-2 border-slate-300 flex items-center justify-center text-slate-400 font-bold text-2xl shadow-inner">
+                                    📷
+                                </div>
+                            )}
+                            {photoPreview && (
+                                <button
+                                    type="button"
+                                    onClick={handleRemovePhoto}
+                                    className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full p-1 shadow-md hover:bg-red-700 transition-colors"
+                                    title="Remove Photo"
+                                >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                            <label className="cursor-pointer px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-xs font-semibold flex items-center gap-1.5 shadow-sm active:scale-95">
+                                📁 {photoPreview ? 'Change Photo' : 'Upload Photo'}
+                                <input
+                                    type="file"
+                                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                                    onChange={handlePhotoSelect}
+                                    className="hidden"
+                                />
+                            </label>
+                            <label className="cursor-pointer px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-xs font-semibold flex items-center gap-1.5 shadow-sm active:scale-95">
+                                📸 Take Photo (Camera)
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    capture="user"
+                                    onChange={handlePhotoSelect}
+                                    className="hidden"
+                                />
+                            </label>
+                            {photoPreview && (
+                                <button
+                                    type="button"
+                                    onClick={handleRemovePhoto}
+                                    className="px-3 py-1.5 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors text-xs font-semibold flex items-center gap-1.5 shadow-sm active:scale-95"
+                                >
+                                    🗑️ Remove Photo
+                                </button>
+                            )}
+                        </div>
+                        <p className="text-[10px] text-gray-500 mt-1">Auto-compressed (JPEG, PNG, WebP)</p>
+                    </div>
+
                     {/* Full-width: Full Name */}
                     <div className="w-full mb-2">
                         <Input small label="Full Name" value={addFormData.name} onChange={(e) => setAddFormData({ ...addFormData, name: e.target.value })} required />

@@ -109,12 +109,12 @@ const StatCard = ({ title, value, icon, color, borderColor, subtitle, trend, tre
     return (
         <Card
             variant="elevated"
-            className={`hover:translate-y-[-2px] hover:shadow-lg transition-all duration-300 ${onClick ? 'cursor-pointer' : 'cursor-default'} group h-full border-l-4 ${borderColor} overflow-hidden relative p-0`}
+            className={`hover:translate-y-[-2px] hover:shadow-md transition-all duration-300 ${onClick ? 'cursor-pointer' : 'cursor-default'} group h-full border-l-4 ${borderColor} overflow-hidden relative p-0 rounded-xl`}
             style={{ borderLeftColor: borderColors[borderColor] }}
             onClick={onClick}
         >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-            <div className="flex items-center justify-between h-full gap-2 relative z-10 p-3">
+            <div className="flex items-center justify-between h-full gap-2 relative z-10 p-2.5 sm:p-3">
                 <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-semibold text-slate-500 leading-tight mb-0.5 uppercase tracking-wider">{title}</p>
                     <div className="text-lg md:text-xl font-black text-slate-800 whitespace-nowrap">
@@ -131,7 +131,7 @@ const StatCard = ({ title, value, icon, color, borderColor, subtitle, trend, tre
                         </span>
                     )}
                 </div>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg ${color} flex-shrink-0 shadow-md group-hover:scale-105 transition-transform duration-300`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg ${color} flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-300`}>
                     {icon}
                 </div>
             </div>
@@ -191,7 +191,7 @@ const AttendanceMiniCard = ({ label, present, absent, late, total, percentage, c
     }, [percentage]);
 
     return (
-        <div ref={ref} className="bg-white rounded-2xl border border-slate-100 shadow-md p-4 hover:shadow-lg transition-shadow">
+        <div ref={ref} className="bg-white rounded-lg border border-slate-200/80 shadow-xs p-3 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                     <span className="text-xl">{icon}</span>
@@ -649,14 +649,15 @@ const AdminDashboard = () => {
             </div>
 
             {/* ==================== STAT CARDS ROW 1 ==================== */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatCard title="Students" value={stats?.totalStudents || 0} icon="🎓" color="bg-blue-100 text-blue-600"
                     borderColor="border-blue-500" subtitle={`${stats?.totalClasses || 0} Classes`} onClick={() => navigate('/admin/students')} />
                 <StatCard title="Teachers" value={stats?.totalTeachers || 0} icon="👨‍🏫" color="bg-emerald-100 text-emerald-600"
                     borderColor="border-emerald-500" subtitle="Teaching Faculty" onClick={() => navigate('/admin/teachers')} />
-
                 <StatCard title="Pending Approvals" value={stats?.pendingRequisitions || 0} icon="⏳" color="bg-amber-100 text-amber-600"
                     borderColor="border-amber-500" subtitle="Require Action" onClick={() => navigate('/admin/requisitions')} />
+                <StatCard title="Active Grievances" value={stats?.activeGrievances || 0} icon="💬" color="bg-rose-100 text-rose-600"
+                    borderColor="border-rose-500" subtitle="Grievance Tickets" onClick={() => navigate('/admin/grievances')} />
             </div>
 
             {/* ==================== TODAY'S ATTENDANCE ==================== */}

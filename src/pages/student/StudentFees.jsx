@@ -16,6 +16,8 @@ const StudentFees = () => {
     const [payments, setPayments] = useState([]);
     const [studentClass, setStudentClass] = useState('');
     const [storePendingAmount, setStorePendingAmount] = useState(0);
+    const [feeCollectionCycle, setFeeCollectionCycle] = useState('monthly');
+    const [studentDiscount, setStudentDiscount] = useState(null);
 
     // Store data
     const [storeBills, setStoreBills] = useState([]);
@@ -48,6 +50,8 @@ const StudentFees = () => {
                 setPayments(feeData.payments || []);
                 setStudentClass(feeData.studentClass || '');
                 setStorePendingAmount(feeData.storePendingAmount || 0);
+                setFeeCollectionCycle(feeData.feeCollectionCycle || 'monthly');
+                setStudentDiscount(feeData.studentDiscount || null);
             } else {
                 setError(feeData.message || 'Failed to fetch fee data');
             }
@@ -211,64 +215,76 @@ const StudentFees = () => {
 
             {/* ─── SUMMARY CARDS ────────────── */}
             {activeTab === 'academic' && (
-                <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
-                    <Card className="!p-1.5 sm:!p-2.5 border-b-2 border-b-blue-500 shadow-2xs hover:shadow-xs">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 overflow-hidden">
-                            <div className="min-w-0 w-full">
-                                <p className="text-[8px] sm:text-[10px] font-bold text-blue-600 uppercase tracking-wider truncate">Total Billed</p>
-                                <p className="text-xs sm:text-base md:text-lg font-bold text-slate-800 truncate">{formatCurrency(feeRecord.total_amount)}</p>
+                <div className="space-y-2">
+                    {/* Top 3 cards — always 3 columns */}
+                    <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
+                        <Card className="!p-2 sm:!p-2.5 border-b-2 border-b-blue-500 shadow-2xs hover:shadow-xs">
+                            <div className="min-w-0">
+                                <p className="text-[7px] sm:text-[10px] font-bold text-blue-600 uppercase tracking-wider truncate">Total Billed</p>
+                                {feeRecord.discount_amount > 0 ? (
+                                    <>
+                                        <p className="text-[9px] text-gray-400 line-through truncate leading-tight">{formatCurrency(feeRecord.total_amount)}</p>
+                                        <p className="text-[11px] sm:text-base md:text-lg font-bold text-slate-800 truncate leading-tight">{formatCurrency(feeRecord.effective_total)}</p>
+                                    </>
+                                ) : (
+                                    <p className="text-[11px] sm:text-base md:text-lg font-bold text-slate-800 truncate leading-tight">{formatCurrency(feeRecord.total_amount)}</p>
+                                )}
                             </div>
-                            <div className="w-5 h-5 sm:w-8 sm:h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs sm:text-sm shrink-0 self-end sm:self-center">📑</div>
-                        </div>
-                    </Card>
-                    <Card className="!p-1.5 sm:!p-2.5 border-b-2 border-b-emerald-500 shadow-2xs hover:shadow-xs">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 overflow-hidden">
-                            <div className="min-w-0 w-full">
-                                <p className="text-[8px] sm:text-[10px] font-bold text-emerald-600 uppercase tracking-wider truncate">Total Paid</p>
-                                <p className="text-xs sm:text-base md:text-lg font-bold text-emerald-600 truncate">{formatCurrency(feeRecord.paid_amount)}</p>
+                        </Card>
+                        <Card className="!p-2 sm:!p-2.5 border-b-2 border-b-emerald-500 shadow-2xs hover:shadow-xs">
+                            <div className="min-w-0">
+                                <p className="text-[7px] sm:text-[10px] font-bold text-emerald-600 uppercase tracking-wider truncate">Total Paid</p>
+                                <p className="text-[11px] sm:text-base md:text-lg font-bold text-emerald-600 truncate leading-tight">{formatCurrency(feeRecord.paid_amount)}</p>
                             </div>
-                            <div className="w-5 h-5 sm:w-8 sm:h-8 rounded-full bg-emerald-50 flex items-center justify-center text-xs sm:text-sm shrink-0 self-end sm:self-center">✅</div>
-                        </div>
-                    </Card>
-                    <Card className="!p-1.5 sm:!p-2.5 border-b-2 border-b-amber-500 shadow-2xs hover:shadow-xs">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 overflow-hidden">
-                            <div className="min-w-0 w-full">
-                                <p className="text-[8px] sm:text-[10px] font-bold text-amber-600 uppercase tracking-wider truncate">Fee Pending</p>
-                                <p className="text-xs sm:text-base md:text-lg font-bold text-amber-600 truncate">{formatCurrency(feeRecord.pending_amount)}</p>
+                        </Card>
+                        <Card className="!p-2 sm:!p-2.5 border-b-2 border-b-amber-500 shadow-2xs hover:shadow-xs">
+                            <div className="min-w-0">
+                                <p className="text-[7px] sm:text-[10px] font-bold text-amber-600 uppercase tracking-wider truncate">Fee Pending</p>
+                                <p className="text-[11px] sm:text-base md:text-lg font-bold text-amber-600 truncate leading-tight">{formatCurrency(feeRecord.pending_amount)}</p>
                             </div>
-                            <div className="w-5 h-5 sm:w-8 sm:h-8 rounded-full bg-amber-50 flex items-center justify-center text-xs sm:text-sm shrink-0 self-end sm:self-center">⏳</div>
+                        </Card>
+                    </div>
+
+                    {/* Discount Saved — full width strip below cards */}
+                    {feeRecord.discount_amount > 0 && (
+                        <div className="flex items-center justify-between p-2 sm:p-2.5 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200/80 rounded-xl shadow-2xs">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-sm sm:text-base shrink-0">🏷️</span>
+                                <div className="min-w-0">
+                                    <p className="text-[9px] sm:text-[10px] font-bold text-teal-700 uppercase tracking-wider">Discount Saved</p>
+                                    {studentDiscount && (
+                                        <p className="text-[8px] sm:text-[10px] text-teal-500 font-medium truncate">
+                                            {studentDiscount.discount_type === 'percentage' ? `${studentDiscount.discount_value}% Off` : 'Flat'} • {studentDiscount.reason || 'Concession'}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            <span className="text-sm sm:text-lg font-extrabold text-teal-600 shrink-0 ml-2">
+                                −{formatCurrency(feeRecord.discount_amount)}
+                            </span>
                         </div>
-                    </Card>
+                    )}
                 </div>
             )}
 
             {activeTab === 'store' && (
                 <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
-                    <Card className="!p-1.5 sm:!p-2.5 border-b-2 border-b-blue-500 shadow-2xs hover:shadow-xs">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 overflow-hidden">
-                            <div className="min-w-0 w-full">
-                                <p className="text-[8px] sm:text-[10px] font-bold text-blue-600 uppercase tracking-wider truncate">Total Spent</p>
-                                <p className="text-xs sm:text-base md:text-lg font-bold text-slate-800 truncate">{formatCurrency(storeSummary.totalSpent)}</p>
-                            </div>
-                            <div className="w-5 h-5 sm:w-8 sm:h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs sm:text-sm shrink-0 self-end sm:self-center">🛍️</div>
+                    <Card className="!p-2 sm:!p-2.5 border-b-2 border-b-blue-500 shadow-2xs hover:shadow-xs">
+                        <div className="min-w-0">
+                            <p className="text-[7px] sm:text-[10px] font-bold text-blue-600 uppercase tracking-wider truncate">Total Spent</p>
+                            <p className="text-[11px] sm:text-base md:text-lg font-bold text-slate-800 truncate leading-tight">{formatCurrency(storeSummary.totalSpent)}</p>
                         </div>
                     </Card>
-                    <Card className="!p-1.5 sm:!p-2.5 border-b-2 border-b-emerald-500 shadow-2xs hover:shadow-xs">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 overflow-hidden">
-                            <div className="min-w-0 w-full">
-                                <p className="text-[8px] sm:text-[10px] font-bold text-emerald-600 uppercase tracking-wider truncate">Store Paid</p>
-                                <p className="text-xs sm:text-base md:text-lg font-bold text-emerald-600 truncate">{formatCurrency(storeSummary.paidAmount)}</p>
-                            </div>
-                            <div className="w-5 h-5 sm:w-8 sm:h-8 rounded-full bg-emerald-50 flex items-center justify-center text-xs sm:text-sm shrink-0 self-end sm:self-center">✅</div>
+                    <Card className="!p-2 sm:!p-2.5 border-b-2 border-b-emerald-500 shadow-2xs hover:shadow-xs">
+                        <div className="min-w-0">
+                            <p className="text-[7px] sm:text-[10px] font-bold text-emerald-600 uppercase tracking-wider truncate">Store Paid</p>
+                            <p className="text-[11px] sm:text-base md:text-lg font-bold text-emerald-600 truncate leading-tight">{formatCurrency(storeSummary.paidAmount)}</p>
                         </div>
                     </Card>
-                    <Card className="!p-1.5 sm:!p-2.5 border-b-2 border-b-rose-500 shadow-2xs hover:shadow-xs">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 overflow-hidden">
-                            <div className="min-w-0 w-full">
-                                <p className="text-[8px] sm:text-[10px] font-bold text-rose-600 uppercase tracking-wider truncate">Store Pending</p>
-                                <p className="text-xs sm:text-base md:text-lg font-bold text-rose-600 truncate">{formatCurrency(storeSummary.pendingAmount)}</p>
-                            </div>
-                            <div className="w-5 h-5 sm:w-8 sm:h-8 rounded-full bg-rose-50 flex items-center justify-center text-xs sm:text-sm shrink-0 self-end sm:self-center">⚠️</div>
+                    <Card className="!p-2 sm:!p-2.5 border-b-2 border-b-rose-500 shadow-2xs hover:shadow-xs">
+                        <div className="min-w-0">
+                            <p className="text-[7px] sm:text-[10px] font-bold text-rose-600 uppercase tracking-wider truncate">Store Pending</p>
+                            <p className="text-[11px] sm:text-base md:text-lg font-bold text-rose-600 truncate leading-tight">{formatCurrency(storeSummary.pendingAmount)}</p>
                         </div>
                     </Card>
                 </div>
@@ -276,7 +292,7 @@ const StudentFees = () => {
 
             {/* ─── TAB: ACADEMIC FEES ──────────────────────────────────────── */}
             {activeTab === 'academic' && (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                     {/* Sub-tabs */}
                     <div className="flex gap-1.5 w-full sm:w-fit">
                         <button onClick={() => setAcademicSubTab('structure')}
@@ -295,25 +311,60 @@ const StudentFees = () => {
 
                     {/* Sub-tab: Fee Structure */}
                     {academicSubTab === 'structure' && (
-                        <Card variant="elevated" className="!p-3 border-t-2 border-t-indigo-500">
-                            <h2 className="text-xs md:text-sm font-bold text-slate-800 mb-2 flex items-center gap-1.5">
-                                📋 Fee Structure {studentClass && <span className="text-xs font-normal text-slate-500">— Class {studentClass}</span>}
-                            </h2>
+                        <Card variant="elevated" className="!p-2.5 sm:!p-3 border-t-2 border-t-indigo-500">
+                            {/* Header Row */}
+                            <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2.5">
+                                <h2 className="text-[11px] sm:text-sm font-bold text-slate-800 flex items-center gap-1">
+                                    📋 Fee Structure {studentClass && <span className="text-[10px] sm:text-xs font-normal text-slate-500">— Class {studentClass}</span>}
+                                </h2>
+                                <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md text-[8px] sm:text-[10px] font-extrabold uppercase tracking-wider whitespace-nowrap">
+                                    {feeCollectionCycle === 'yearly' ? '🗓️ Annual' : feeCollectionCycle === 'quarterly' ? '📆 Quarterly' : '📅 Monthly'}
+                                </span>
+                            </div>
+
+                            {/* Compact Discount Banner */}
+                            {studentDiscount && parseFloat(studentDiscount.discount_value) > 0 && (
+                                <div className="flex items-center justify-between p-2 sm:p-2.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 rounded-lg mb-2.5">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <span className="text-sm shrink-0">🏷️</span>
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] sm:text-xs font-bold text-emerald-900 truncate">Concession / Discount</p>
+                                            <p className="text-[9px] sm:text-[10px] text-emerald-600 font-medium truncate">
+                                                {studentDiscount.discount_type === 'percentage' ? `${studentDiscount.discount_value}% Off` : `₹${parseFloat(studentDiscount.discount_value).toLocaleString('en-IN')} Off`}
+                                                {studentDiscount.reason ? ` • ${studentDiscount.reason}` : ''}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="px-2 py-0.5 bg-emerald-600 text-white font-extrabold text-[9px] sm:text-[10px] rounded-md shadow-xs shrink-0 ml-1.5">
+                                        {studentDiscount.discount_type === 'percentage' ? `${studentDiscount.discount_value}%` : `-₹${parseFloat(studentDiscount.discount_value).toLocaleString('en-IN')}`}
+                                    </span>
+                                </div>
+                            )}
+
                             {feeBreakdown.length > 0 ? (
-                                <div className="space-y-1.5">
+                                <div className="space-y-1">
                                     {feeBreakdown.filter(f => f.label !== 'Admission Fee').map((item, idx) => (
-                                        <div key={idx} className="flex items-center justify-between py-1.5 px-2.5 bg-slate-50 rounded-lg hover:bg-indigo-50/50 transition-colors text-xs">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm">{item.icon}</span>
-                                                <span className="font-medium text-slate-700">{item.label}</span>
+                                        <div key={idx} className="flex items-center justify-between py-1.5 px-2 sm:px-2.5 bg-slate-50 rounded-lg hover:bg-indigo-50/50 transition-colors">
+                                            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                                                <span className="text-xs sm:text-sm shrink-0">{item.icon}</span>
+                                                <span className="text-[10px] sm:text-xs font-medium text-slate-700 truncate">{item.label}</span>
                                             </div>
-                                            <span className="font-bold text-slate-900">{formatCurrency(item.amount)}</span>
+                                            <div className="text-right shrink-0 ml-2">
+                                                <span className="text-[10px] sm:text-xs font-bold text-slate-900 block leading-tight">
+                                                    {formatCurrency(item.amount)}{feeCollectionCycle === 'monthly' ? '/mo' : ''}
+                                                </span>
+                                                {feeCollectionCycle === 'monthly' && (
+                                                    <span className="text-[8px] sm:text-[9px] text-slate-400 block leading-tight">
+                                                        ({formatCurrency(item.amount * 12)}/yr)
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     ))}
 
                                     {feeBreakdown.find(f => f.label === 'Admission Fee') && (
-                                        <div className="flex items-center justify-between py-1.5 px-2.5 bg-slate-100 rounded-lg text-slate-600 text-xs">
-                                            <span className="font-semibold uppercase tracking-wider text-[10px]">Academic Fees Total</span>
+                                        <div className="flex items-center justify-between py-1.5 px-2 sm:px-2.5 bg-slate-100 rounded-lg text-slate-600 text-[10px] sm:text-xs">
+                                            <span className="font-semibold uppercase tracking-wider text-[9px] sm:text-[10px]">Academic Fees Total</span>
                                             <span className="font-bold">
                                                 {formatCurrency(feeBreakdown.filter(f => f.label !== 'Admission Fee').reduce((sum, item) => sum + parseFloat(item.amount || 0), 0))}
                                             </span>
@@ -321,25 +372,65 @@ const StudentFees = () => {
                                     )}
 
                                     {feeBreakdown.find(f => f.label === 'Admission Fee') && (
-                                        <div className="flex items-center justify-between py-2 px-3 bg-amber-50 border border-amber-200 rounded-lg mt-2 mb-1 shadow-2xs relative overflow-hidden text-xs">
+                                        <div className="flex items-center justify-between py-1.5 px-2 sm:px-3 bg-amber-50 border border-amber-200 rounded-lg mt-1.5 relative overflow-hidden">
                                             <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-base">🎓</span>
-                                                <div>
-                                                    <span className="font-bold text-amber-900 text-xs block leading-none">Admission Fee</span>
-                                                    <span className="text-[9px] font-bold text-amber-700 uppercase tracking-widest bg-amber-200/50 px-1.5 py-0.2 rounded inline-block mt-0.5">One-Time Fee</span>
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                <span className="text-sm shrink-0">🎓</span>
+                                                <div className="min-w-0">
+                                                    <span className="font-bold text-amber-900 text-[10px] sm:text-xs block leading-none truncate">Admission Fee</span>
+                                                    <span className="text-[8px] sm:text-[9px] font-bold text-amber-700 uppercase tracking-widest bg-amber-200/50 px-1 py-0.2 rounded inline-block mt-0.5">One-Time</span>
                                                 </div>
                                             </div>
-                                            <span className="font-bold text-sm text-amber-900">
+                                            <span className="font-bold text-xs sm:text-sm text-amber-900 shrink-0 ml-2">
                                                 {formatCurrency(feeBreakdown.find(f => f.label === 'Admission Fee').amount)}
                                             </span>
                                         </div>
                                     )}
 
-                                    <div className="flex items-center justify-between py-2.5 px-3 bg-gradient-to-r from-indigo-600 to-indigo-800 text-white rounded-lg mt-2 shadow-sm text-xs">
-                                        <span className="font-bold uppercase tracking-wider text-xs">{feeBreakdown.find(f => f.label === 'Admission Fee') ? 'Grand Total' : 'Total Fee'}</span>
-                                        <span className="font-bold text-sm md:text-base">{formatCurrency(feeStructure.total_fee)}</span>
+                                    {/* Total Base Fee */}
+                                    <div className="flex items-center justify-between py-2 px-2 sm:px-3 bg-gradient-to-r from-indigo-600 to-indigo-800 text-white rounded-lg mt-1.5 shadow-sm">
+                                        <div className="min-w-0">
+                                            <span className="font-bold uppercase tracking-wider text-[10px] sm:text-xs block leading-tight truncate">
+                                                {feeBreakdown.find(f => f.label === 'Admission Fee') ? 'Grand Total' : 'Total Fee'}
+                                            </span>
+                                            {feeCollectionCycle === 'monthly' && (
+                                                <span className="text-[8px] sm:text-[10px] text-indigo-200 font-medium block leading-tight">
+                                                    ({formatCurrency(feeStructure.total_fee * 12)}/yr)
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="font-extrabold text-xs sm:text-sm md:text-base shrink-0 ml-2">
+                                            {formatCurrency(feeStructure.total_fee)}{feeCollectionCycle === 'monthly' ? '/mo' : ''}
+                                        </span>
                                     </div>
+
+                                    {/* Discount Deduction Row */}
+                                    {feeRecord.discount_amount > 0 && (
+                                        <>
+                                            <div className="flex items-center justify-between py-1.5 px-2 sm:px-3 bg-teal-50 border border-teal-200 rounded-lg mt-1 relative overflow-hidden">
+                                                <div className="absolute top-0 left-0 w-1 h-full bg-teal-500"></div>
+                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                    <span className="text-sm shrink-0">🏷️</span>
+                                                    <div className="min-w-0">
+                                                        <span className="font-bold text-teal-800 text-[10px] sm:text-xs block leading-none truncate">Discount</span>
+                                                        <span className="text-[8px] sm:text-[9px] font-bold text-teal-600 uppercase bg-teal-200/50 px-1 py-0.2 rounded inline-block mt-0.5 truncate max-w-[120px] sm:max-w-none">
+                                                            {studentDiscount?.discount_type === 'percentage' ? `${studentDiscount.discount_value}%` : 'Flat'}
+                                                            {studentDiscount?.reason ? ` • ${studentDiscount.reason}` : ''}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <span className="font-extrabold text-xs sm:text-sm text-teal-700 shrink-0 ml-2">
+                                                    −{formatCurrency(feeRecord.discount_amount)}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between py-2 px-2 sm:px-3 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-lg mt-1 shadow-sm">
+                                                <span className="font-bold uppercase tracking-wider text-[10px] sm:text-xs truncate">✅ You Pay</span>
+                                                <span className="font-extrabold text-xs sm:text-sm md:text-base shrink-0 ml-2">
+                                                    {formatCurrency(feeRecord.effective_total)}{feeCollectionCycle === 'monthly' ? '/mo' : ''}
+                                                </span>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="text-center py-6 text-slate-400">

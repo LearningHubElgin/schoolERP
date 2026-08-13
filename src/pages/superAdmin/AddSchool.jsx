@@ -27,6 +27,7 @@ const AddSchool = () => {
         website: '',
         subscription_plan: 'basic',
         subscription_end: '',
+        fee_collection_cycle: 'monthly',
         admin_email: '',
         admin_password: ''
     });
@@ -68,6 +69,7 @@ const AddSchool = () => {
                             website: school.website || '',
                             subscription_plan: school.subscription_plan || 'basic',
                             subscription_end: school.subscription_end ? school.subscription_end.split('T')[0] : '',
+                            fee_collection_cycle: school.fee_collection_cycle || 'monthly',
                             admin_email: school.admin_email || '',
                             admin_password: ''
                         });
@@ -478,6 +480,25 @@ const AddSchool = () => {
                                     </label>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Fee Collection Policy */}
+                        <div className="pt-2">
+                            <label className="text-sm font-semibold text-slate-800 mb-1 block">💰 Fee Collection Mode / Cycle *</label>
+                            <select
+                                name="fee_collection_cycle"
+                                value={formData.fee_collection_cycle}
+                                onChange={handleInputChange}
+                                className="w-full py-2.5 px-3.5 border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-gradient-to-r from-indigo-50/50 to-blue-50/50 font-bold text-indigo-900 shadow-xs"
+                            >
+                                <option value="monthly">📅 Monthly Collection (12 Monthly Installments / Year)</option>
+                                <option value="yearly">🗓️ Yearly / Annual Collection (1 Single Payment / Year)</option>
+                                <option value="quarterly">📆 Quarterly Collection (4 Payments / Year)</option>
+                                <option value="half_yearly">🌗 Half-Yearly Collection (2 Payments / Year)</option>
+                            </select>
+                            <p className="text-xs text-slate-500 mt-1">
+                                Configures whether student fees for this school branch are collected on a Monthly basis or Yearly / Annual basis.
+                            </p>
                         </div>
                     </div>
 

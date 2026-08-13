@@ -1,0 +1,354 @@
+[
+  {
+    "tableName": "activity_logs",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT NULL,\n  `user_id` int(11) DEFAULT NULL,\n  `user_name` varchar(100) DEFAULT NULL,\n  `user_email` varchar(100) DEFAULT NULL,\n  `user_role` varchar(50) DEFAULT NULL,\n  `action` varchar(50) NOT NULL,\n  `details` text DEFAULT NULL,\n  `ip_address` varchar(50) DEFAULT NULL,\n  `user_agent` varchar(255) DEFAULT NULL,\n  `status` varchar(20) DEFAULT 'Success',\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `branch_id` int(11) DEFAULT NULL,\n  `academic_year_id` int(11) DEFAULT NULL,\n  `module_name` varchar(100) NOT NULL DEFAULT 'System',\n  `entity_type` varchar(100) DEFAULT NULL,\n  `entity_id` varchar(100) DEFAULT NULL,\n  `entity_name` varchar(255) DEFAULT NULL,\n  `description` text DEFAULT NULL,\n  `old_value` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`old_value`)),\n  `new_value` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`new_value`)),\n  `changed_fields` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`changed_fields`)),\n  `performed_by_user_id` int(11) NOT NULL DEFAULT 0,\n  `performed_by_name` varchar(255) DEFAULT NULL,\n  `performed_by_role` varchar(100) DEFAULT NULL,\n  `browser` varchar(255) DEFAULT NULL,\n  `device` varchar(255) DEFAULT NULL,\n  `operating_system` varchar(255) DEFAULT NULL,\n  `request_method` varchar(10) DEFAULT NULL,\n  `request_url` varchar(500) DEFAULT NULL,\n  `failure_reason` text DEFAULT NULL,\n  `session_id` varchar(255) DEFAULT NULL,\n  `severity` enum('info','warning','error','critical') DEFAULT 'info',\n  `execution_time` int(11) DEFAULT NULL,\n  `request_id` varchar(100) DEFAULT NULL,\n  `correlation_id` varchar(100) DEFAULT NULL"
+  },
+  {
+    "tableName": "announcements",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `title` varchar(255) NOT NULL,\n  `description` text NOT NULL,\n  `category` varchar(100) NOT NULL,\n  `priority` enum('low','medium','high') DEFAULT 'medium',\n  `date` date NOT NULL,\n  `created_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "assignments",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `teacher_id` int(11) NOT NULL,\n  `class` varchar(50) NOT NULL,\n  `section` varchar(50) NOT NULL,\n  `subject_id` int(11) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text DEFAULT NULL,\n  `file_path` varchar(255) DEFAULT NULL,\n  `due_date` date DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "assignment_submissions",
+    "body": "  `id` int(11) NOT NULL,\n  `assignment_id` int(11) NOT NULL,\n  `student_id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `file_path` varchar(255) NOT NULL,\n  `submitted_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `grade` varchar(50) DEFAULT NULL,\n  `feedback` text DEFAULT NULL"
+  },
+  {
+    "tableName": "bonafide_certificates",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `student_id` int(11) NOT NULL,\n  `student_name` varchar(255) NOT NULL,\n  `class` varchar(50) NOT NULL,\n  `section` varchar(20) NOT NULL,\n  `roll_no` varchar(50) NOT NULL,\n  `father_name` varchar(255) DEFAULT NULL,\n  `mother_name` varchar(255) DEFAULT NULL,\n  `purpose` varchar(255) NOT NULL,\n  `issued_date` date NOT NULL,\n  `certificate_number` varchar(100) NOT NULL,\n  `remarks` text DEFAULT NULL,\n  `issued_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "character_certificates",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `student_id` int(11) NOT NULL,\n  `student_name` varchar(255) NOT NULL,\n  `class` varchar(50) NOT NULL,\n  `section` varchar(20) NOT NULL,\n  `roll_no` varchar(50) NOT NULL,\n  `father_name` varchar(255) DEFAULT NULL,\n  `mother_name` varchar(255) DEFAULT NULL,\n  `purpose` varchar(255) NOT NULL,\n  `conduct_remarks` text DEFAULT NULL COMMENT 'Behavioral remarks',\n  `issued_date` date NOT NULL,\n  `certificate_number` varchar(100) NOT NULL,\n  `remarks` text DEFAULT NULL,\n  `issued_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "classes",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `name` varchar(50) NOT NULL,\n  `class_number` varchar(20) NOT NULL,\n  `sort_order` int(11) DEFAULT 0,\n  `class_category` enum('pre_primary','primary','middle','secondary','higher_secondary') DEFAULT 'primary',\n  `description` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "class_notes",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `teacher_id` int(11) NOT NULL,\n  `class` varchar(50) NOT NULL,\n  `section` varchar(50) NOT NULL,\n  `subject_id` int(11) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text DEFAULT NULL,\n  `file_path` varchar(255) NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "class_sections",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `class_id` int(11) NOT NULL,\n  `section_id` int(11) NOT NULL,\n  `stream_id` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "class_streams",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `class_id` int(11) NOT NULL,\n  `stream_id` int(11) NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "class_subjects",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `class_id` int(11) NOT NULL,\n  `subject_id` int(11) NOT NULL,\n  `stream_id` int(11) DEFAULT NULL,\n  `is_mandatory` tinyint(1) DEFAULT 1 COMMENT '1 = mandatory, 0 = optional/elective',\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "combination_subjects",
+    "body": "  `id` int(11) NOT NULL,\n  `combination_id` int(11) NOT NULL,\n  `subject_id` int(11) NOT NULL,\n  `is_optional` tinyint(1) DEFAULT 0"
+  },
+  {
+    "tableName": "daywise_attendance_teachers",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `teacher_id` int(11) NOT NULL,\n  `class_number` varchar(20) NOT NULL,\n  `section` varchar(20) NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `stream_id` int(11) DEFAULT NULL"
+  },
+  {
+    "tableName": "enquiries",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `enquiry_number` varchar(50) NOT NULL,\n  `student_name` varchar(255) NOT NULL,\n  `date_of_birth` date DEFAULT NULL,\n  `gender` enum('Male','Female','Other') DEFAULT NULL,\n  `class_applied` varchar(50) DEFAULT NULL,\n  `stream_id` int(11) DEFAULT NULL,\n  `father_name` varchar(255) DEFAULT NULL,\n  `mother_name` varchar(255) DEFAULT NULL,\n  `phone` varchar(20) NOT NULL,\n  `alternate_phone` varchar(20) DEFAULT NULL,\n  `email` varchar(255) DEFAULT NULL,\n  `address` text DEFAULT NULL,\n  `source` enum('Website','Social Media','Referral','Walk-in','Phone Call','Advertisement','Other') DEFAULT 'Website',\n  `status` enum('New','Contacted','Follow-up Scheduled','Converted','Dropped') DEFAULT 'New',\n  `priority` enum('High','Medium','Low') DEFAULT 'Medium',\n  `assigned_to` int(11) DEFAULT NULL COMMENT 'staff_id (admin/admission)',\n  `follow_up_date` date DEFAULT NULL,\n  `follow_up_notes` text DEFAULT NULL,\n  `converted_to_application_id` int(11) DEFAULT NULL,\n  `remarks` text DEFAULT NULL,\n  `created_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "events",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text DEFAULT NULL,\n  `event_date` date NOT NULL,\n  `event_time` time DEFAULT NULL,\n  `location` varchar(255) DEFAULT NULL,\n  `priority` enum('low','medium','high') DEFAULT 'medium',\n  `status` enum('upcoming','ongoing','completed','cancelled') DEFAULT 'upcoming',\n  `created_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "exam_terms",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL DEFAULT 1,\n  `term_name` varchar(100) NOT NULL,\n  `academic_year` varchar(20) DEFAULT NULL,\n  `status` enum('draft','active','finalized') DEFAULT 'draft',\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "expenses",
+    "body": "  `id` int(11) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `amount` decimal(10,2) NOT NULL,\n  `gst_amount` decimal(10,2) DEFAULT 0.00,\n  `category` varchar(100) NOT NULL,\n  `payment_method` varchar(50) NOT NULL,\n  `expense_date` date NOT NULL,\n  `description` text DEFAULT NULL,\n  `date` date DEFAULT NULL,\n  `receipt_path` varchar(255) DEFAULT NULL,\n  `status` varchar(50) DEFAULT 'approved',\n  `school_id` int(11) NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  `expense_time` time DEFAULT '10:00:00'"
+  },
+  {
+    "tableName": "fee_admission",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `amount` decimal(10,2) NOT NULL DEFAULT 0.00,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "fee_column_types",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `column_key` varchar(50) NOT NULL,\n  `display_name` varchar(100) NOT NULL,\n  `sort_order` int(11) DEFAULT 0,\n  `is_active` tinyint(1) DEFAULT 1,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "fee_column_values",
+    "body": "  `id` int(11) NOT NULL,\n  `fee_structure_id` int(11) NOT NULL,\n  `column_type_id` int(11) NOT NULL,\n  `amount` decimal(10,2) DEFAULT 0.00"
+  },
+  {
+    "tableName": "fee_records",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `student_id` int(11) NOT NULL,\n  `student_name` varchar(255) DEFAULT NULL,\n  `class_name` varchar(50) DEFAULT NULL,\n  `fee_type` varchar(50) DEFAULT 'Annual Fee',\n  `total_amount` decimal(10,2) NOT NULL,\n  `paid_amount` decimal(10,2) DEFAULT 0.00,\n  `pending_amount` decimal(10,2) NOT NULL,\n  `gst_amount` decimal(10,2) DEFAULT 0.00,\n  `net_amount` decimal(10,2) DEFAULT 0.00,\n  `payment_method` enum('offline','online') DEFAULT 'offline',\n  `transaction_id` varchar(100) DEFAULT NULL,\n  `payment_date` datetime DEFAULT NULL,\n  `last_payment_date` datetime DEFAULT NULL,\n  `status` enum('pending','paid') DEFAULT 'pending',\n  `transaction_remarks` text DEFAULT NULL,\n  `received_by` int(11) DEFAULT NULL,\n  `academic_year` varchar(20) NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "fee_structures",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `class_id` int(11) NOT NULL,\n  `stream_id` int(11) NOT NULL DEFAULT 0,\n  `group_name` varchar(50) NOT NULL DEFAULT 'General',\n  `tuition_fee` decimal(10,2) DEFAULT 0.00,\n  `library_fee` decimal(10,2) DEFAULT 0.00,\n  `sports_fee` decimal(10,2) DEFAULT 0.00,\n  `lab_fee` decimal(10,2) DEFAULT 0.00,\n  `exam_fee` decimal(10,2) DEFAULT 0.00,\n  `hostel_fee` decimal(10,2) DEFAULT 0.00,\n  `misc_fee` decimal(10,2) DEFAULT 0.00,\n  `total_fee` decimal(10,2) DEFAULT 0.00,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "forms",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text DEFAULT NULL,\n  `category` enum('Seasonal','All-time') NOT NULL,\n  `type` enum('File','Link') NOT NULL,\n  `file_path` varchar(255) DEFAULT NULL,\n  `link_url` varchar(255) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "grievances",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `student_id` int(11) NOT NULL,\n  `subject` varchar(255) NOT NULL,\n  `category` varchar(100) NOT NULL,\n  `description` text NOT NULL,\n  `status` enum('pending','in_progress','resolved') DEFAULT 'pending',\n  `priority` enum('low','medium','high') DEFAULT 'medium',\n  `submitted_date` date NOT NULL,\n  `resolved_date` date DEFAULT NULL,\n  `assigned_to` varchar(255) DEFAULT NULL,\n  `resolution` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "holidays",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text DEFAULT NULL,\n  `start_date` date NOT NULL,\n  `end_date` date DEFAULT NULL,\n  `type` enum('National','Religious','School','Other') DEFAULT 'Other',\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "lesson_plans",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `teacher_id` int(11) NOT NULL,\n  `class_number` varchar(20) NOT NULL,\n  `section` varchar(10) NOT NULL,\n  `subject_id` int(11) NOT NULL,\n  `week_start_date` date NOT NULL,\n  `scheduled_date` date DEFAULT NULL,\n  `topic` varchar(255) NOT NULL,\n  `sub_topics` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`sub_topics`)),\n  `description` text DEFAULT NULL,\n  `completion_percentage` int(11) DEFAULT 0,\n  `completion_date` date DEFAULT NULL,\n  `status` enum('pending','in_progress','completed') DEFAULT 'pending',\n  `notes` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "lesson_plan_comments",
+    "body": "  `id` int(11) NOT NULL,\n  `lesson_plan_id` int(11) NOT NULL,\n  `user_id` int(11) NOT NULL,\n  `comment` text NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "library_books",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `isbn` varchar(20) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `author` varchar(100) NOT NULL,\n  `category` varchar(50) NOT NULL,\n  `publisher` varchar(100) DEFAULT NULL,\n  `year` int(11) DEFAULT NULL,\n  `total_copies` int(11) NOT NULL DEFAULT 1,\n  `available_copies` int(11) NOT NULL DEFAULT 1,\n  `shelf_location` varchar(20) DEFAULT NULL,\n  `cover_image` varchar(500) DEFAULT NULL,\n  `description` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "library_issued_books",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `student_id` int(11) NOT NULL,\n  `book_id` int(11) NOT NULL,\n  `issue_date` date NOT NULL,\n  `due_date` date NOT NULL,\n  `return_date` date DEFAULT NULL,\n  `status` enum('issued','returned','overdue') DEFAULT 'issued',\n  `fine_amount` decimal(10,2) DEFAULT 0.00,\n  `remarks` text DEFAULT NULL,\n  `issued_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "marksheet_templates",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL DEFAULT 1,\n  `name` varchar(100) NOT NULL,\n  `config` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`config`)),\n  `is_default` tinyint(1) DEFAULT 0,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  `assigned_class` text DEFAULT NULL,\n  `assigned_section` varchar(255) DEFAULT NULL,\n  `assigned_stream` varchar(255) DEFAULT NULL"
+  },
+  {
+    "tableName": "marks_assignments",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL DEFAULT 1,\n  `exam_term_id` int(11) NOT NULL,\n  `teacher_id` int(11) NOT NULL,\n  `class` varchar(20) NOT NULL,\n  `section` varchar(10) DEFAULT NULL,\n  `subject_id` int(11) NOT NULL,\n  `is_completed` tinyint(1) DEFAULT 0,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `is_locked` tinyint(1) DEFAULT 0,\n  `locked_columns` text DEFAULT NULL,\n  `is_published` tinyint(1) DEFAULT 0"
+  },
+  {
+    "tableName": "non_teaching_staff",
+    "body": "  `id` int(11) NOT NULL,\n  `user_id` int(11) NOT NULL,\n  `employee_id` varchar(50) NOT NULL,\n  `name` varchar(100) NOT NULL,\n  `email` varchar(100) NOT NULL,\n  `phone` varchar(20) NOT NULL,\n  `designation` varchar(100) NOT NULL,\n  `department` varchar(100) DEFAULT 'General',\n  `joining_date` date DEFAULT NULL,\n  `address` text DEFAULT NULL,\n  `date_of_birth` date DEFAULT NULL,\n  `gender` enum('Male','Female','Other') NOT NULL,\n  `blood_group` varchar(10) DEFAULT NULL,\n  `emergency_contact` varchar(20) DEFAULT NULL,\n  `photo` varchar(255) DEFAULT NULL,\n  `school_id` int(11) NOT NULL,\n  `status` enum('Active','Inactive') DEFAULT 'Active',\n  `created_at` timestamp NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "non_teaching_staff_attendance",
+    "body": "  `id` int(11) NOT NULL,\n  `user_id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `date` date NOT NULL,\n  `status` enum('present','absent','holiday','half_day') NOT NULL DEFAULT 'absent',\n  `check_in_time` varchar(20) DEFAULT NULL,\n  `check_out_time` varchar(20) DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "non_teaching_staff_cards",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `user_id` int(11) NOT NULL,\n  `title` varchar(100) DEFAULT 'Staff Identity Card',\n  `card_number` varchar(50) NOT NULL,\n  `status` enum('active','revoked') DEFAULT 'active',\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "non_teaching_staff_shifts",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `user_id` int(11) NOT NULL,\n  `shift_name` varchar(50) NOT NULL DEFAULT 'General',\n  `start_time` time NOT NULL,\n  `end_time` time NOT NULL,\n  `effective_from` date NOT NULL,\n  `effective_to` date DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "notices",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text DEFAULT NULL,\n  `publish_date` date NOT NULL,\n  `expiry_date` date DEFAULT NULL,\n  `priority` enum('low','medium','high') DEFAULT 'medium',\n  `target_audience` enum('all','students','teachers','parents','staff') DEFAULT 'all',\n  `is_active` tinyint(1) DEFAULT 1,\n  `created_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "online_study_videos",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `subject_id` int(11) DEFAULT NULL,\n  `subject_name` varchar(255) DEFAULT NULL,\n  `topic_name` varchar(255) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text DEFAULT NULL,\n  `video_url` varchar(500) DEFAULT NULL,\n  `video_path` varchar(500) DEFAULT NULL,\n  `uploaded_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `playlist_id` int(11) DEFAULT NULL"
+  },
+  {
+    "tableName": "password_reset_tokens",
+    "body": "  `id` int(11) NOT NULL,\n  `user_id` int(11) NOT NULL,\n  `token` varchar(255) NOT NULL,\n  `expires_at` datetime NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "quotations",
+    "body": "  `id` int(11) NOT NULL,\n  `tender_id` int(11) NOT NULL,\n  `vendor_name` varchar(255) NOT NULL,\n  `vendor_contact` varchar(100) DEFAULT NULL,\n  `quoted_amount` decimal(15,2) NOT NULL,\n  `proposal_details` text DEFAULT NULL,\n  `proposal_file` varchar(255) DEFAULT NULL,\n  `status` varchar(50) DEFAULT 'pending',\n  `submitted_date` date DEFAULT curdate(),\n  `school_id` int(11) NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `vendor_id` int(11) DEFAULT NULL"
+  },
+  {
+    "tableName": "requisitions",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `requested_by` int(11) NOT NULL,\n  `user_role` varchar(50) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text DEFAULT NULL,\n  `status` enum('pending','approved','rejected') DEFAULT 'pending',\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "schools",
+    "body": "  `id` int(11) NOT NULL,\n  `code` varchar(20) NOT NULL,\n  `name` varchar(255) NOT NULL,\n  `address` text DEFAULT NULL,\n  `city` varchar(100) DEFAULT NULL,\n  `state` varchar(100) DEFAULT NULL,\n  `pincode` varchar(10) DEFAULT NULL,\n  `phone` varchar(20) DEFAULT NULL,\n  `email` varchar(255) DEFAULT NULL,\n  `logo` varchar(500) DEFAULT NULL,\n  `principal_name` varchar(255) DEFAULT NULL,\n  `established_year` int(4) DEFAULT NULL,\n  `board` varchar(50) DEFAULT NULL COMMENT 'CBSE, ICSE, State Board, etc.',\n  `website` varchar(255) DEFAULT NULL,\n  `status` enum('active','inactive','suspended') DEFAULT 'active',\n  `subscription_plan` varchar(50) DEFAULT 'basic',\n  `subscription_start` date DEFAULT NULL,\n  `subscription_end` date DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  `latitude` decimal(10,7) DEFAULT NULL,\n  `longitude` decimal(10,7) DEFAULT NULL,\n  `attendance_radius_meters` int(11) DEFAULT 500,\n  `principal_signature` varchar(500) DEFAULT NULL,\n  `min_hours_half_day` decimal(3,1) DEFAULT 4.0,\n  `min_hours_full_day` decimal(3,1) DEFAULT 6.0,\n  `fee_collection_cycle` varchar(50) DEFAULT 'monthly'"
+  },
+  {
+    "tableName": "school_settings",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `setting_key` varchar(50) NOT NULL,\n  `setting_value` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "school_weekly_schedule",
+    "body": "  `school_id` int(11) NOT NULL,\n  `day_of_week` int(11) NOT NULL,\n  `is_working` tinyint(1) NOT NULL DEFAULT 1"
+  },
+  {
+    "tableName": "school_working_days",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `date` date NOT NULL,\n  `day_type` enum('working','holiday') NOT NULL DEFAULT 'working',\n  `note` varchar(255) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "sections",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `name` varchar(50) NOT NULL,\n  `code` varchar(10) NOT NULL,\n  `description` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "stores",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `name` varchar(100) NOT NULL,\n  `slug` varchar(50) NOT NULL,\n  `icon` varchar(10) DEFAULT '?',\n  `description` text DEFAULT NULL,\n  `is_active` tinyint(1) DEFAULT 1,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "store_bills",
+    "body": "  `id` int(11) NOT NULL,\n  `bill_number` varchar(50) NOT NULL,\n  `store_id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `student_id` int(11) DEFAULT NULL,\n  `student_name` varchar(200) DEFAULT 'Walk-in Customer',\n  `buyer_type` varchar(20) DEFAULT 'student',\n  `class_name` varchar(50) DEFAULT '',\n  `items_json` text NOT NULL,\n  `subtotal` decimal(10,2) NOT NULL DEFAULT 0.00,\n  `gst_type` enum('none','inclusive','exclusive') DEFAULT 'none',\n  `total_amount` decimal(12,2) DEFAULT 0.00,\n  `gst_amount` decimal(12,2) DEFAULT 0.00,\n  `gst_percentage` decimal(5,2) DEFAULT 0.00,\n  `payment_status` enum('paid','pending') DEFAULT 'paid',\n  `payment_method` varchar(50) DEFAULT 'cash',\n  `notes` text DEFAULT NULL,\n  `bill_file_path` varchar(500) DEFAULT NULL,\n  `created_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "store_grievances",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `store_id` int(11) DEFAULT NULL,\n  `subject` varchar(200) NOT NULL,\n  `description` text DEFAULT NULL,\n  `priority` enum('low','medium','high') DEFAULT 'medium',\n  `status` enum('pending','in_progress','resolved') DEFAULT 'pending',\n  `submitted_by` int(11) DEFAULT NULL,\n  `submitted_by_name` varchar(200) DEFAULT NULL,\n  `resolved_by` int(11) DEFAULT NULL,\n  `resolution_notes` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "store_inventory",
+    "body": "  `id` int(11) NOT NULL,\n  `store_id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `item_name` varchar(200) NOT NULL,\n  `category` varchar(100) DEFAULT NULL,\n  `sku` varchar(50) DEFAULT NULL,\n  `quantity` int(11) DEFAULT 0,\n  `unit_price` decimal(10,2) DEFAULT 0.00,\n  `selling_price` decimal(10,2) DEFAULT 0.00,\n  `low_stock_threshold` int(11) DEFAULT 5,\n  `description` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "store_requisitions",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `store_id` int(11) DEFAULT NULL,\n  `item_name` varchar(200) NOT NULL,\n  `quantity` int(11) NOT NULL DEFAULT 1,\n  `description` text DEFAULT NULL,\n  `urgency` enum('low','medium','high') DEFAULT 'medium',\n  `status` enum('Pending','Approved','Rejected') DEFAULT 'Pending',\n  `submitted_by` int(11) DEFAULT NULL,\n  `submitted_by_name` varchar(200) DEFAULT NULL,\n  `approved_by` varchar(200) DEFAULT NULL,\n  `approved_date` datetime DEFAULT NULL,\n  `remarks` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "store_transactions",
+    "body": "  `id` int(11) NOT NULL,\n  `store_id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `student_id` int(11) DEFAULT NULL,\n  `student_name` varchar(200) DEFAULT NULL,\n  `buyer_type` varchar(20) DEFAULT 'student',\n  `class_name` varchar(50) DEFAULT NULL,\n  `item_id` int(11) NOT NULL,\n  `item_name` varchar(200) DEFAULT NULL,\n  `quantity` int(11) NOT NULL,\n  `unit_price` decimal(10,2) DEFAULT NULL,\n  `total_amount` decimal(10,2) DEFAULT NULL,\n  `transaction_type` enum('sale','return') DEFAULT 'sale',\n  `payment_method` varchar(50) DEFAULT 'cash',\n  `payment_status` enum('paid','pending') DEFAULT 'paid',\n  `bill_number` varchar(50) DEFAULT NULL,\n  `notes` text DEFAULT NULL,\n  `created_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "streams",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `name` varchar(100) NOT NULL,\n  `code` varchar(20) NOT NULL,\n  `description` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "stream_combinations",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `stream_id` int(11) NOT NULL,\n  `name` varchar(100) NOT NULL,\n  `code` varchar(20) NOT NULL,\n  `description` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "students",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `user_id` int(11) DEFAULT NULL,\n  `student_unique_id` varchar(50) DEFAULT NULL,\n  `application_id` int(11) DEFAULT NULL,\n  `student_name` varchar(255) NOT NULL,\n  `email` varchar(255) DEFAULT NULL,\n  `phone` varchar(20) DEFAULT NULL,\n  `roll_no` varchar(50) NOT NULL,\n  `class` varchar(20) DEFAULT NULL,\n  `section` varchar(10) NOT NULL,\n  `stream_id` int(11) DEFAULT NULL,\n  `combination_id` int(11) DEFAULT NULL,\n  `date_of_birth` date DEFAULT NULL,\n  `gender` varchar(20) DEFAULT NULL,\n  `address` text DEFAULT NULL,\n  `father_name` varchar(255) DEFAULT NULL,\n  `father_phone` varchar(20) DEFAULT NULL,\n  `mother_name` varchar(255) DEFAULT NULL,\n  `mother_phone` varchar(20) DEFAULT NULL,\n  `admission_date` date NOT NULL,\n  `blood_group` varchar(10) DEFAULT NULL,\n  `medical_conditions` text DEFAULT NULL,\n  `previous_school` varchar(255) DEFAULT NULL,\n  `previous_class` varchar(10) DEFAULT NULL,\n  `batch_id` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  `photo_path` varchar(255) DEFAULT NULL,\n  `created_by` int(11) DEFAULT NULL,\n  `father_photo` varchar(255) DEFAULT NULL,\n  `mother_photo` varchar(255) DEFAULT NULL,\n  `student_aadhaar` varchar(255) DEFAULT NULL,\n  `father_aadhaar` varchar(255) DEFAULT NULL,\n  `mother_aadhaar` varchar(255) DEFAULT NULL,\n  `father_pan` varchar(255) DEFAULT NULL,\n  `mother_pan` varchar(255) DEFAULT NULL,\n  `status` enum('active','passed_out','transferred') DEFAULT 'active',\n  `passed_out_date` date DEFAULT NULL,\n  `passed_out_class` varchar(50) DEFAULT NULL,\n  `passed_out_year` year(4) DEFAULT NULL,\n  `remarks` text DEFAULT NULL"
+  },
+  {
+    "tableName": "students_attendance",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `student_id` int(11) NOT NULL,\n  `date` date NOT NULL,\n  `subject` varchar(100) NOT NULL,\n  `status` enum('present','absent') NOT NULL DEFAULT 'present',\n  `marked_by` int(11) DEFAULT NULL COMMENT 'teacher_id who marked attendance',\n  `marked_by_history` varchar(255) DEFAULT NULL,\n  `remarks` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "student_applications",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `application_no` varchar(50) NOT NULL,\n  `student_name` varchar(255) NOT NULL,\n  `date_of_birth` date NOT NULL,\n  `gender` varchar(20) DEFAULT NULL,\n  `class` varchar(10) NOT NULL,\n  `stream_id` int(11) DEFAULT NULL,\n  `section` varchar(10) DEFAULT NULL,\n  `father_name` varchar(255) NOT NULL,\n  `mother_name` varchar(255) NOT NULL,\n  `father_phone` varchar(20) DEFAULT NULL,\n  `mother_phone` varchar(20) DEFAULT NULL,\n  `parent_phone` varchar(20) DEFAULT NULL,\n  `phone` varchar(20) NOT NULL,\n  `email` varchar(255) NOT NULL,\n  `address` text NOT NULL,\n  `previous_school` varchar(255) DEFAULT NULL,\n  `previous_class` varchar(10) DEFAULT NULL,\n  `blood_group` varchar(10) DEFAULT NULL,\n  `medical_conditions` text DEFAULT NULL,\n  `student_photo` varchar(255) DEFAULT NULL,\n  `father_photo` varchar(255) DEFAULT NULL,\n  `mother_photo` varchar(255) DEFAULT NULL,\n  `student_aadhaar` varchar(255) DEFAULT NULL,\n  `father_aadhaar` varchar(255) DEFAULT NULL,\n  `mother_aadhaar` varchar(255) DEFAULT NULL,\n  `father_pan` varchar(255) DEFAULT NULL,\n  `mother_pan` varchar(255) DEFAULT NULL,\n  `photo_path` varchar(255) DEFAULT NULL,\n  `status` enum('pending','admitted','rejected') DEFAULT 'pending',\n  `applied_date` date NOT NULL,\n  `admitted_date` date DEFAULT NULL,\n  `rejected_date` date DEFAULT NULL,\n  `rejection_reason` text DEFAULT NULL,\n  `applicable_months` text DEFAULT NULL,\n  `processed_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "student_cards",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `student_id` int(11) NOT NULL,\n  `card_number` varchar(50) DEFAULT NULL,\n  `card_type` enum('Identity Card','Admit Card','Library Card','Registration Card','Marks Card','Other') NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "student_fee_discounts",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `student_id` int(11) NOT NULL,\n  `discount_type` enum('flat','percentage') DEFAULT 'flat',\n  `discount_value` decimal(10,2) NOT NULL DEFAULT 0.00,\n  `frequency` enum('monthly','yearly','one_time') DEFAULT 'monthly',\n  `reason` varchar(255) DEFAULT NULL,\n  `applicable_months` text DEFAULT NULL,\n  `notes` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "student_grievances",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `student_id` int(11) NOT NULL,\n  `subject` varchar(255) NOT NULL,\n  `category` varchar(100) NOT NULL,\n  `description` text NOT NULL,\n  `priority` varchar(50) DEFAULT 'Medium',\n  `status` varchar(50) DEFAULT 'Pending',\n  `submitted_date` date DEFAULT NULL,\n  `assigned_to` varchar(255) DEFAULT NULL,\n  `resolution` text DEFAULT NULL,\n  `resolved_date` date DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "student_leaves",
+    "body": "  `id` int(11) NOT NULL,\n  `student_id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `start_date` date NOT NULL,\n  `end_date` date NOT NULL,\n  `reason` text NOT NULL,\n  `status` enum('Pending','Approved','Rejected') DEFAULT 'Pending',\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "student_marks",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL DEFAULT 1,\n  `exam_term_id` int(11) NOT NULL,\n  `student_id` int(11) NOT NULL,\n  `subject_id` int(11) NOT NULL,\n  `marks_obtained` decimal(5,2) DEFAULT NULL,\n  `total_marks` decimal(5,2) DEFAULT 100.00,\n  `grade` varchar(5) DEFAULT NULL,\n  `custom_marks` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`custom_marks`)),\n  `teacher_id` int(11) NOT NULL,\n  `is_finalized` tinyint(1) DEFAULT 0,\n  `entered_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "student_requisition",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `student_id` int(11) NOT NULL,\n  `student_name` varchar(255) DEFAULT NULL,\n  `class` varchar(50) DEFAULT NULL,\n  `title` varchar(255) NOT NULL,\n  `category` varchar(100) NOT NULL,\n  `description` text NOT NULL,\n  `quantity` int(11) DEFAULT 1,\n  `urgency` varchar(50) DEFAULT 'Normal',\n  `status` varchar(50) DEFAULT 'Pending',\n  `submitted_date` date DEFAULT NULL,\n  `approved_by` varchar(255) DEFAULT NULL,\n  `approved_date` date DEFAULT NULL,\n  `remarks` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "study_notes",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `file_path` varchar(255) NOT NULL,\n  `parent_type` enum('playlist','video') NOT NULL,\n  `parent_id` int(11) NOT NULL,\n  `created_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "study_playlists",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `subject_id` int(11) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text DEFAULT NULL,\n  `created_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "subjects",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `name` varchar(100) NOT NULL,\n  `code` varchar(20) NOT NULL,\n  `description` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "syllabus",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `class` varchar(50) NOT NULL,\n  `section` varchar(50) DEFAULT NULL,\n  `subject_id` int(11) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `file_path` varchar(255) DEFAULT NULL,\n  `uploaded_by` int(11) NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `content` text DEFAULT NULL"
+  },
+  {
+    "tableName": "teachers",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `user_id` int(11) DEFAULT NULL,\n  `employee_id` varchar(50) NOT NULL,\n  `name` varchar(255) DEFAULT NULL,\n  `email` varchar(255) DEFAULT NULL,\n  `phone` varchar(20) DEFAULT NULL,\n  `subject` varchar(255) NOT NULL,\n  `qualification` varchar(255) DEFAULT NULL,\n  `experience` varchar(50) DEFAULT NULL,\n  `joining_date` date NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  `address` text DEFAULT NULL,\n  `date_of_birth` date DEFAULT NULL,\n  `gender` varchar(20) DEFAULT NULL,\n  `emergency_contact` varchar(20) DEFAULT NULL,\n  `photo_path` varchar(255) DEFAULT NULL,\n  `basic_salary` decimal(10,2) DEFAULT 0.00,\n  `allowance` decimal(10,2) DEFAULT 0.00,\n  `deduction` decimal(10,2) DEFAULT 0.00,\n  `can_manage_students` tinyint(4) DEFAULT 0,\n  `managed_classes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`managed_classes`)),\n  `managed_streams` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`managed_streams`))"
+  },
+  {
+    "tableName": "teachers_requisition",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `teacher_id` int(11) NOT NULL,\n  `teacher_name` varchar(255) DEFAULT NULL,\n  `item` varchar(255) NOT NULL,\n  `quantity` int(11) NOT NULL,\n  `description` text NOT NULL,\n  `urgency` varchar(50) DEFAULT 'Medium',\n  `category` varchar(100) DEFAULT NULL,\n  `status` varchar(50) DEFAULT 'Pending',\n  `submitted_date` date DEFAULT NULL,\n  `approved_date` date DEFAULT NULL,\n  `rejected_date` date DEFAULT NULL,\n  `rejection_reason` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "teacher_attendance",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `teacher_id` int(11) NOT NULL,\n  `date` date NOT NULL,\n  `status` enum('Present','Absent','Half Day','Late') DEFAULT 'Present',\n  `check_in_time` time DEFAULT NULL,\n  `check_out_time` time DEFAULT NULL,\n  `location_verified` tinyint(1) DEFAULT 0,\n  `latitude` decimal(10,8) DEFAULT NULL,\n  `longitude` decimal(11,8) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "teacher_classes",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `teacher_id` int(11) NOT NULL,\n  `class` varchar(10) NOT NULL,\n  `section` varchar(10) NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "teacher_full_details",
+    "body": "`id` int(11)\n,`employee_id` varchar(50)\n,`name` varchar(255)\n,`email` varchar(255)\n,`phone` varchar(20)\n,`subject` varchar(255)\n,`qualification` varchar(255)\n,`experience` varchar(50)\n,`joining_date` date\n,`status` enum('active','inactive','suspended')"
+  },
+  {
+    "tableName": "teacher_grievance",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `teacher_id` int(11) NOT NULL,\n  `teacher_name` varchar(255) DEFAULT NULL,\n  `department` varchar(100) DEFAULT NULL,\n  `subject` varchar(255) NOT NULL,\n  `category` varchar(100) NOT NULL,\n  `description` text NOT NULL,\n  `priority` varchar(50) DEFAULT 'Medium',\n  `status` varchar(50) DEFAULT 'Pending',\n  `submitted_date` date DEFAULT NULL,\n  `assigned_to` varchar(255) DEFAULT NULL,\n  `resolution` text DEFAULT NULL,\n  `resolved_date` date DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "teacher_leaves",
+    "body": "  `id` int(11) NOT NULL,\n  `teacher_id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `start_date` date NOT NULL,\n  `end_date` date NOT NULL,\n  `reason` text NOT NULL,\n  `status` enum('Pending','Approved','Rejected') DEFAULT 'Pending',\n  `rejection_reason` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "teacher_payslips",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `teacher_id` int(11) NOT NULL,\n  `month` varchar(20) NOT NULL,\n  `year` int(11) NOT NULL,\n  `title` varchar(255) DEFAULT NULL,\n  `file_path` varchar(500) NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "tenders",
+    "body": "  `id` int(11) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text NOT NULL,\n  `opening_date` date NOT NULL,\n  `closing_date` date NOT NULL,\n  `min_bid_amount` decimal(15,2) DEFAULT NULL,\n  `status` varchar(50) DEFAULT 'open',\n  `school_id` int(11) NOT NULL,\n  `created_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  `requisition_id` int(11) DEFAULT NULL"
+  },
+  {
+    "tableName": "timetable",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `class_number` varchar(20) NOT NULL,\n  `section` varchar(10) NOT NULL,\n  `stream_id` int(11) DEFAULT NULL,\n  `day_of_week` enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday') NOT NULL,\n  `time_slot_id` int(11) NOT NULL,\n  `time_slot_name` varchar(100) DEFAULT NULL,\n  `subject_id` int(11) DEFAULT NULL,\n  `subject_name` varchar(255) DEFAULT NULL,\n  `teacher_id` int(11) DEFAULT NULL,\n  `teacher_name` varchar(255) DEFAULT NULL,\n  `room_number` varchar(50) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  `is_elective` tinyint(1) DEFAULT 0,\n  `is_merged` tinyint(1) DEFAULT 0,\n  `merged_id` varchar(50) DEFAULT NULL,\n  `merge_group_id` varchar(36) DEFAULT NULL"
+  },
+  {
+    "tableName": "timetable_elective_students",
+    "body": "  `id` int(11) NOT NULL,\n  `timetable_id` int(11) NOT NULL,\n  `student_id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "timetable_view",
+    "body": "`id` int(11)\n,`class_number` varchar(20)\n,`section` varchar(10)\n,`day_of_week` enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')\n,`slot_name` varchar(50)\n,`start_time` time\n,`end_time` time\n,`is_break` tinyint(1)\n,`subject_name` varchar(100)\n,`subject_code` varchar(20)\n,`employee_id` varchar(50)\n,`teacher_name` varchar(255)\n,`room_number` varchar(50)\n,`school_id` int(11)\n,`created_at` timestamp\n,`updated_at` timestamp"
+  },
+  {
+    "tableName": "time_slots",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `start_time` time NOT NULL,\n  `end_time` time NOT NULL,\n  `slot_name` varchar(50) NOT NULL,\n  `is_break` tinyint(1) DEFAULT 0,\n  `display_order` int(11) NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "transactions",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `student_id` int(11) DEFAULT NULL,\n  `transaction_id` varchar(50) DEFAULT NULL,\n  `payment_method` varchar(20) DEFAULT NULL,\n  `amount` decimal(10,2) DEFAULT NULL,\n  `net_amount` decimal(10,2) DEFAULT NULL,\n  `gst_amount` decimal(10,2) DEFAULT NULL,\n  `payment_date` date DEFAULT NULL,\n  `status` varchar(20) DEFAULT 'success',\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "transfer_certificates",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `student_id` int(11) NOT NULL,\n  `student_name` varchar(255) NOT NULL,\n  `class` varchar(50) NOT NULL,\n  `section` varchar(20) NOT NULL,\n  `roll_no` varchar(50) NOT NULL,\n  `father_name` varchar(255) DEFAULT NULL,\n  `mother_name` varchar(255) DEFAULT NULL,\n  `admission_no` varchar(50) DEFAULT NULL,\n  `date_of_leaving` date NOT NULL,\n  `last_class_attended` varchar(50) NOT NULL,\n  `reason_for_leaving` text NOT NULL,\n  `conduct` enum('Excellent','Very Good','Good','Satisfactory','Poor') DEFAULT 'Good',\n  `total_attendance_percentage` decimal(5,2) DEFAULT NULL,\n  `eligible_for_admission` tinyint(1) DEFAULT 1,\n  `fees_cleared` tinyint(1) DEFAULT 0,\n  `outstanding_fees` decimal(10,2) DEFAULT 0.00,\n  `certificate_number` varchar(100) NOT NULL,\n  `issued_date` date NOT NULL,\n  `remarks` text DEFAULT NULL,\n  `issued_by` int(11) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "transport_assignments",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL DEFAULT 1,\n  `student_id` int(11) NOT NULL,\n  `vehicle_id` int(11) NOT NULL,\n  `route_name` varchar(255) DEFAULT NULL,\n  `pickup_point` varchar(255) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "transport_drivers",
+    "body": "  `id` int(11) NOT NULL,\n  `user_id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL DEFAULT 1,\n  `license_no` varchar(50) NOT NULL,\n  `experience_years` int(11) DEFAULT 0,\n  `status` enum('active','inactive') DEFAULT 'active',\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "transport_driver_attendance",
+    "body": "  `id` int(11) NOT NULL,\n  `driver_id` int(11) NOT NULL,\n  `date` date NOT NULL,\n  `status` enum('Present','Absent','Late','Half Day') NOT NULL DEFAULT 'Present',\n  `check_in_time` varchar(15) DEFAULT NULL,\n  `check_out_time` varchar(15) DEFAULT NULL,\n  `location_verified` tinyint(1) DEFAULT 0,\n  `school_id` int(11) NOT NULL,\n  `marked_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `latitude` decimal(10,8) DEFAULT NULL,\n  `longitude` decimal(11,8) DEFAULT NULL,\n  `distance_from_school` decimal(10,2) DEFAULT NULL,\n  `remarks` text DEFAULT NULL"
+  },
+  {
+    "tableName": "transport_vehicles",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL DEFAULT 1,\n  `vehicle_no` varchar(50) NOT NULL,\n  `type` enum('Bus','Mini Bus','Van','Car (4 Wheeler)','SUV') NOT NULL DEFAULT 'Bus',\n  `model` varchar(100) DEFAULT NULL,\n  `capacity` int(11) NOT NULL,\n  `registration_no` varchar(50) NOT NULL,\n  `status` enum('Active','Maintenance','Inactive') DEFAULT 'Active',\n  `driver_id` int(11) DEFAULT NULL COMMENT 'Reference to users table with role driver',\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  `route` varchar(255) DEFAULT 'Not Set' COMMENT 'The designated path/route this vehicle travels',\n  `current_latitude` decimal(10,8) DEFAULT NULL,\n  `current_longitude` decimal(11,8) DEFAULT NULL,\n  `is_tracking` tinyint(1) DEFAULT 0,\n  `last_location_update` timestamp NULL DEFAULT NULL,\n  `tracking_start_time` timestamp NULL DEFAULT NULL,\n  `current_place_name` varchar(255) DEFAULT NULL"
+  },
+  {
+    "tableName": "users",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) DEFAULT 1,\n  `email` varchar(255) DEFAULT NULL,\n  `password` varchar(255) NOT NULL,\n  `role` enum('student','teacher','accountant','admin','admission','librarian','storemanager','security','driver','nonteachingstaff','superadmin') NOT NULL DEFAULT 'student',\n  `name` varchar(255) NOT NULL,\n  `phone` varchar(20) DEFAULT NULL,\n  `student_unique_id` varchar(50) DEFAULT NULL,\n  `status` enum('active','inactive','suspended') DEFAULT 'active',\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()"
+  },
+  {
+    "tableName": "vendors",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `name` varchar(255) NOT NULL,\n  `contact_person` varchar(255) DEFAULT NULL,\n  `phone` varchar(50) DEFAULT NULL,\n  `email` varchar(255) DEFAULT NULL,\n  `address` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  },
+  {
+    "tableName": "visitor_approvals",
+    "body": "  `id` int(11) NOT NULL,\n  `school_id` int(11) NOT NULL,\n  `visitor_name` varchar(100) NOT NULL,\n  `phone` varchar(15) NOT NULL,\n  `whom_to_meet` varchar(50) NOT NULL,\n  `purpose` varchar(255) NOT NULL,\n  `visit_date` date NOT NULL,\n  `visit_time` time NOT NULL,\n  `status` enum('pending','approved','rejected') DEFAULT 'pending',\n  `check_in_time` datetime DEFAULT NULL,\n  `check_out_time` datetime DEFAULT NULL,\n  `notes` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp()"
+  }
+]

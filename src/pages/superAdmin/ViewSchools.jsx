@@ -384,7 +384,13 @@ const ViewSchools = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/50 p-3 rounded-lg border border-slate-200/50">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
+                            <div className="space-y-1">
+                                <p className="text-xs text-indigo-500 font-semibold uppercase tracking-wider">Fee Collection Cycle</p>
+                                <p className="text-indigo-900 font-bold text-xs uppercase">
+                                    {selectedSchool.fee_collection_cycle === 'yearly' ? '🗓️ Yearly (Annual)' : '📅 Monthly (12 Mo)'}
+                                </p>
+                            </div>
                             <div className="space-y-1">
                                 <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Teachers</p>
                                 <p className="text-slate-800 font-bold text-sm">👨‍🏫 {selectedSchool.teacher_count || 0}</p>

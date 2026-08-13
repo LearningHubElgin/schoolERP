@@ -32,7 +32,7 @@ const DEFAULT_CONFIG = {
     customColumns: [],
     columnGroups: [],
     customStudentFields: [],
-    summary: { showTotal: true, showPercentage: true, showResult: false, showGrade: true, passingPercentage: 33 },
+    summary: { showTotal: true, showPercentage: false, showResult: false, showGrade: false, passingPercentage: 33 },
     footer: { showDate: true, showSignatureLines: true, signatureLabels: ['Class Teacher', 'Principal'], footerText: 'This is a computer generated marksheet.', showRemarks: false },
     styling: { primaryColor: '#4f46e5', headerBgColor: '#1e1b4b', headerTextColor: '#FFFFFF', tableHeaderBg: '#4f46e5', tableHeaderText: '#FFFFFF', evenRowBg: '#f8fafc', oddRowBg: '#FFFFFF', borderColor: '#e2e8f0', fontFamily: 'Inter', showBorder: true, borderStyle: 'full' },
     page: { orientation: 'portrait', size: 'a4', marginTop: 15, marginBottom: 15, marginLeft: 20, marginRight: 20 },
@@ -312,7 +312,7 @@ const MarksheetTemplateEditor = () => {
                 marksColumns: { subject: { enabled: true, label: 'Subject' }, max_marks: { enabled: true, label: 'Max' }, marks_obtained: { enabled: true, label: 'Scored' }, grade: { enabled: false, label: 'Grade' }, percentage: { enabled: true, label: '%' }, remarks: { enabled: true, label: 'Remark' }, theory_marks: { enabled: false, label: 'Theory' }, practical_marks: { enabled: false, label: 'Practical' }, internal_marks: { enabled: false, label: 'Internal' }, external_marks: { enabled: false, label: 'External' } },
                 styling: { primaryColor: '#008080', headerBgColor: '#008080', headerTextColor: '#FFFFFF', tableHeaderBg: '#008080', tableHeaderText: '#FFFFFF', evenRowBg: '#F0FFFF', oddRowBg: '#FFFFFF', borderColor: '#B2DFDB', fontFamily: 'helvetica', showBorder: true, borderStyle: 'full' },
                 footer: { showDate: true, showSignatureLines: true, signatureLabels: ['Class Teacher'], footerText: '', showRemarks: false },
-                summary: { showTotal: true, showPercentage: true, showResult: true, showGrade: false, passingPercentage: 33 },
+                summary: { showTotal: true, showPercentage: false, showResult: false, showGrade: false, passingPercentage: 33 },
                 page: { orientation: 'portrait', size: 'a4', marginTop: 12, marginBottom: 12, marginLeft: 15, marginRight: 15 },
             }
         },

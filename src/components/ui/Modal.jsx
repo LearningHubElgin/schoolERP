@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }) => {
+const Modal = ({ isOpen, onClose, title, children, footer, size = 'md', zIndex = 'z-[99999]' }) => {
     const sizes = {
         sm: 'max-w-md',
         md: 'max-w-2xl',
@@ -23,7 +23,7 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }) => {
     if (!isOpen) return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-[99999] overflow-hidden flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
+        <div className={`fixed inset-0 ${zIndex} overflow-hidden flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200`}>
             {/* Backdrop */}
             <div
                 className="fixed inset-0 transition-opacity bg-slate-950/70 backdrop-blur-md"

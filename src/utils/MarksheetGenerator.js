@@ -72,14 +72,14 @@ export const generateMarksheetPDF = (config, data, schoolLogoBase64) => {
 
     // Prepare Columns
     const builtInCols = Object.entries(c.marksColumns)
-        .filter(([_, v]) => v.enabled)
+        .filter(([k, v]) => v.enabled && k !== 'grade')
         .map(([k, v]) => ({ key: k, label: v.label, order: v.order || 99, group: v.group }));
 
     const customCols = (c.customColumns || [])
-        .filter(col => col.enabled)
+        .filter(col => col.enabled && col.key !== 'grade')
         .map(col => ({ key: col.key, label: col.label, isCustom: true, order: col.order || 99, group: col.group }));
 
-    const allCols = [...builtInCols, ...customCols].sort((a, b) => a.order - b.order);
+    const allCols = [...builtInCols, ...customCols].filter(c => c.key !== 'grade').sort((a, b) => a.order - b.order);
 
     const getVal = (sub, col) => {
         const key = col.key;
@@ -354,17 +354,9 @@ export const generateMarksheetPDF = (config, data, schoolLogoBase64) => {
     });
 
     // ── SUMMARY ──
-    if (c.summary.showTotal || c.summary.showPercentage || c.summary.showGrade) {
+    if (c.summary.showTotal) {
         pdf.setFillColor(...tblHdrBg); pdf.rect(ml, y, contentWidth, 10, 'F'); pdf.setTextColor(...tblHdrTxt); pdf.setFontSize(10);
-        const parts = [];
-        if (c.summary.showTotal) parts.push(`Total: ${totalObtained}/${totalMax}`);
-        if (c.summary.showPercentage) parts.push(`Percentage: ${totalMax ? ((totalObtained / totalMax) * 100).toFixed(1) : 0}%`);
-        if (c.summary.showGrade) {
-            const p = totalMax ? (totalObtained / totalMax) * 100 : 0;
-            let g = 'A+'; if (p < 90) g = 'A'; if (p < 80) g = 'B+'; if (p < 70) g = 'B'; if (p < 60) g = 'C'; if (p < 50) g = 'D'; if (p < 40) g = 'F';
-            parts.push(`Grade: ${g}`);
-        }
-        pdf.text(parts.join('    |    '), pageWidth / 2, y + 6.5, { align: 'center' }); y += 12;
+        pdf.text(`Total: ${totalObtained}/${totalMax}`, pageWidth / 2, y + 6.5, { align: 'center' }); y += 12;
     }
 
     // ── GRADING SCALE ──

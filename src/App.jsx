@@ -70,6 +70,8 @@ import AccountsAnalytics from './pages/accounts/AccountsAnalytics';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
 import AdminFeeManagement from './pages/admin/FeeManagement';
+import AdminFeeTransactions from './pages/admin/AdminFeeTransactions';
+import AdminStudentFeeSetup from './pages/admin/AdminStudentFeeSetup';
 import RequisitionApproval from './pages/admin/RequisitionApproval';
 import GrievanceManagement from './pages/admin/GrievanceManagement';
 import StudentManagement from './pages/admin/StudentManagement';
@@ -261,6 +263,8 @@ function App() {
             <Route index element={<Navigate to="/accounts/dashboard" replace />} />
             <Route path="dashboard" element={<AccountsDashboard />} />
             <Route path="fees" element={<FeeManagement />} />
+            <Route path="fee-transactions" element={<AdminFeeTransactions />} />
+            <Route path="fee-student-setup" element={<AdminStudentFeeSetup />} />
             <Route path="expenses" element={<ExpenseManagement />} />
             <Route path="reports" element={<AccountsReports />} />
             <Route path="analytics" element={<AccountsAnalytics />} />
@@ -274,6 +278,8 @@ function App() {
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="fees" element={<AdminFeeManagement />} />
+            <Route path="fee-transactions" element={<AdminFeeTransactions />} />
+            <Route path="fee-student-setup" element={<AdminStudentFeeSetup />} />
             <Route path="requisitions" element={<RequisitionApproval />} />
             <Route path="grievances" element={<GrievanceManagement />} />
             <Route path="students" element={<StudentManagement />} />

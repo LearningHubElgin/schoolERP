@@ -64,6 +64,12 @@ const ApplicationDetails = () => {
         fetchApplicationDetails();
     }, [id]);
 
+    useEffect(() => {
+        if (application && application.class) {
+            fetchFeeStructure(application.class, application.stream_id);
+        }
+    }, [application]);
+
     // Fetch classes on component mount
     useEffect(() => {
         const fetchClasses = async () => {
@@ -126,8 +132,9 @@ const ApplicationDetails = () => {
                     gender: data.application.gender || '',
                     class: data.application.class,
                     fatherName: data.application.father_name,
+                    fatherPhone: data.application.father_phone || data.application.parent_phone || '',
                     motherName: data.application.mother_name,
-                    parentPhone: data.application.parent_phone || '',
+                    motherPhone: data.application.mother_phone || '',
                     phone: data.application.phone,
                     email: data.application.email,
                     address: data.application.address,
@@ -162,11 +169,46 @@ const ApplicationDetails = () => {
 
             if (data.success && data.feeStructure) {
                 setFeeStructure(data.feeStructure);
+
+                let studentMonths = [];
+                if (application?.applicable_months) {
+                    try {
+                        studentMonths = typeof application.applicable_months === 'string'
+                            ? JSON.parse(application.applicable_months)
+                            : application.applicable_months;
+                    } catch (e) {}
+                }
+                if (!Array.isArray(studentMonths) || studentMonths.length === 0) {
+                    if (data.feeStructure.applicable_months) {
+                        studentMonths = data.feeStructure.applicable_months;
+                    }
+                }
+
+                const monthsCount = (Array.isArray(studentMonths) && studentMonths.length > 0)
+                    ? studentMonths.length
+                    : (data.feeStructure.months_count || 12);
+
+                let monthlyRate = 0;
+                if (data.feeStructure.fee_columns && data.feeStructure.fee_columns.length > 0) {
+                    data.feeStructure.fee_columns.forEach(col => {
+                        const isMonthly = col.display_name.toLowerCase().includes('tuition') || col.display_name.toLowerCase().includes('monthly');
+                        if (isMonthly) {
+                            monthlyRate += Number(data.feeStructure.column_values?.[col.id] || 0);
+                        }
+                    });
+                }
+                if (monthlyRate === 0) {
+                    monthlyRate = Number(data.feeStructure.tuition_fee || data.feeStructure.total_fee || 0);
+                }
+
+                const totalAcademicFee = monthlyRate * monthsCount;
+                const admissionFee = Number(data.feeStructure.admission_fee || 0);
+
                 setAdmitData(prev => ({
                     ...prev,
-                    annualFeeAmount: data.feeStructure.total_fee || 0,
-                    admissionFeeAmount: data.feeStructure.admission_fee || 0,
-                    admissionPaid: data.feeStructure.admission_fee || 0, // Pre-fill
+                    annualFeeAmount: totalAcademicFee,
+                    admissionFeeAmount: admissionFee,
+                    admissionPaid: admissionFee, // Pre-fill
                     annualPaid: ''
                 }));
             } else {
@@ -505,75 +547,93 @@ const ApplicationDetails = () => {
         );
     }
 
-    // Helper for rendering labeled value
-    const DetailRow = ({ label, value }) => (
-        <div className="mb-4 last:mb-0">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide block mb-1">{label}</span>
-            <p className="text-slate-800 font-medium text-lg border-b border-slate-100 pb-2">{value || '-'}</p>
+    // Helper for rendering labeled value in structured tiles
+    const DetailRow = ({ label, value, colSpan = 1 }) => (
+        <div className={`p-2.5 sm:p-3 bg-slate-50/80 border border-slate-200/80 rounded-xl transition-all hover:bg-slate-100/50 ${colSpan === 2 ? 'col-span-2' : ''}`}>
+            <span className="text-[10px] sm:text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block leading-none">{label}</span>
+            <p className="text-slate-900 font-bold text-xs sm:text-sm mt-1 leading-tight">{value || '-'}</p>
         </div>
     );
 
     return (
-        <div className="space-y-6 pb-12">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
+        <div className="space-y-2.5 sm:space-y-3.5 pb-2 flex flex-col h-full lg:h-[calc(100vh-100px)] lg:overflow-hidden">
+            {/* Header Banner */}
+            <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 p-2.5 sm:p-4 text-white shadow-md sm:shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0">
+                <div className="relative z-10">
                     <button
                         onClick={() => navigate('/admission/applications')}
-                        className="flex items-center text-slate-500 hover:text-slate-800 mb-2 transition-colors group"
+                        className="inline-flex items-center text-blue-100 hover:text-white text-xs font-bold mb-1 transition-colors group cursor-pointer"
                     >
-                        <svg className="w-5 h-5 mr-1 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 mr-1 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                         </svg>
-                        Back
+                        Back to Applications
                     </button>
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Application Details</h1>
-                        <Badge variant={getStatusBadge(application.status)} size="lg">
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-xs sm:text-xl font-bold tracking-tight">Application Details #{application.application_no || id}</h1>
+                        <Badge variant={getStatusBadge(application.status)} size="sm">
                             {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
                         </Badge>
                     </div>
                 </div>
-                <div className="flex flex-wrap gap-2 ">
-                    <Button variant="secondary" onClick={handleDownloadPDF} className="bg-green-500 border-slate-200">
-                        📄 Download Application
-                    </Button>
+                <div className="flex flex-wrap gap-1.5 shrink-0 z-10">
+                    <button
+                        onClick={handleDownloadPDF}
+                        className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1"
+                    >
+                        📄 <span className="hidden xs:inline">Download Application</span><span className="xs:hidden">Download</span>
+                    </button>
                     {application.status.toLowerCase() === 'admitted' && (
-                        <Button variant="primary" onClick={handleDownloadPaymentSlip}>
-                            🧾 Payment Receipt
-                        </Button>
+                        <button
+                            onClick={handleDownloadPaymentSlip}
+                            className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1"
+                        >
+                            🧾 <span className="hidden xs:inline">Payment Receipt</span><span className="xs:hidden">Receipt</span>
+                        </button>
                     )}
                     {!isEditing && application.status.toLowerCase() !== 'rejected' && (
-                        <Button variant="primary" onClick={() => setIsEditing(true)}>
+                        <button
+                            onClick={() => setIsEditing(true)}
+                            className="px-2.5 py-1.5 bg-white text-indigo-700 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1 border border-white/40"
+                        >
                             ✏️ Edit
-                        </Button>
+                        </button>
                     )}
                     {isEditing && (
                         <>
-                            <Button variant="secondary" onClick={() => setIsEditing(false)} disabled={processing}>
+                            <button
+                                onClick={() => setIsEditing(false)}
+                                disabled={processing}
+                                className="px-2.5 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                            >
                                 Cancel
-                            </Button>
-                            <Button variant="success" onClick={handleSaveChanges} disabled={processing}>
+                            </button>
+                            <button
+                                onClick={handleSaveChanges}
+                                disabled={processing}
+                                className="px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                            >
                                 Save Changes
-                            </Button>
+                            </button>
                         </>
                     )}
                 </div>
+                <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
             </div>
 
             {/* Content Grid */}
-            <div className={`grid grid-cols-1 ${application.status.toLowerCase() === 'pending' ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6`}>
+            <div className={`grid grid-cols-1 ${application.status.toLowerCase() === 'pending' ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-2.5 sm:gap-3.5 flex-1 min-h-0 lg:overflow-hidden`}>
 
-                {/* Main Information Column */}
-                <div className="lg:col-span-2 space-y-6">
+                {/* Main Information Column (Independent Scroll) */}
+                <div className="lg:col-span-2 space-y-2.5 sm:space-y-3.5 lg:overflow-y-auto lg:pr-1.5 custom-scrollbar pb-6">
                     {/* Student Info */}
-                    <Card title="Student Information" className="shadow-sm border-slate-200">
+                    <Card title="Student Information" className="shadow-2xs border-slate-200/80">
                         {isEditing ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <Input label="Full Name" name="studentName" value={editFormData.studentName} onChange={handleEditChange} />
                                 <div className="space-y-1">
-                                    <label className="text-sm font-medium text-slate-700">Gender</label>
-                                    <select name="gender" value={editFormData.gender} onChange={handleEditChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg">
+                                    <label className="text-xs font-bold text-slate-700">Gender</label>
+                                    <select name="gender" value={editFormData.gender} onChange={handleEditChange} className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg">
                                         <option value="">Select Gender</option>
                                         <option value="Male">Male</option>
                                         <option value="Female">Female</option>
@@ -582,8 +642,8 @@ const ApplicationDetails = () => {
                                 </div>
                                 <Input label="Date of Birth" type="date" name="dateOfBirth" value={editFormData.dateOfBirth} onChange={handleEditChange} />
                                 <div className="space-y-1">
-                                    <label className="text-sm font-medium text-slate-700">Class</label>
-                                    <select name="class" value={editFormData.class} onChange={handleEditChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg" disabled={classesLoading}>
+                                    <label className="text-xs font-bold text-slate-700">Class</label>
+                                    <select name="class" value={editFormData.class} onChange={handleEditChange} className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg" disabled={classesLoading}>
                                         <option value="">{classesLoading ? 'Loading classes...' : 'Select Class'}</option>
                                         {[...classes]
                                             .sort((a, b) => (parseInt(a.class_number) || 0) - (parseInt(b.class_number) || 0))
@@ -596,16 +656,16 @@ const ApplicationDetails = () => {
                                 </div>
                                 {isHigherSecondary(editFormData.class) && (
                                     <div className="space-y-1">
-                                        <label className="text-sm font-medium text-slate-700">Stream / Group</label>
-                                        <select name="stream_id" value={editFormData.stream_id} onChange={handleEditChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg" disabled={streamsLoading}>
+                                        <label className="text-xs font-bold text-slate-700">Stream / Group</label>
+                                        <select name="stream_id" value={editFormData.stream_id} onChange={handleEditChange} className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg" disabled={streamsLoading}>
                                             <option value="">{streamsLoading ? 'Loading...' : 'Select Stream'}</option>
                                             {streams.map(s => <option key={s.id} value={s.id}>{s.stream_name}</option>)}
                                         </select>
                                     </div>
                                 )}
                                 <div className="space-y-1">
-                                    <label className="text-sm font-medium text-slate-700">Blood Group</label>
-                                    <select name="bloodGroup" value={editFormData.bloodGroup} onChange={handleEditChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg">
+                                    <label className="text-xs font-bold text-slate-700">Blood Group</label>
+                                    <select name="bloodGroup" value={editFormData.bloodGroup} onChange={handleEditChange} className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg">
                                         <option value="">Select</option>
                                         {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
                                     </select>
@@ -613,12 +673,12 @@ const ApplicationDetails = () => {
                                 <Input label="Email" name="email" value={editFormData.email} onChange={handleEditChange} />
                                 <Input label="Phone" name="phone" value={editFormData.phone} onChange={handleEditChange} />
                                 <div className="md:col-span-2">
-                                    <label className="text-sm font-medium text-slate-700">Address</label>
-                                    <textarea name="address" value={editFormData.address} onChange={handleEditChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg mt-1" rows="3" />
+                                    <label className="text-xs font-bold text-slate-700">Address</label>
+                                    <textarea name="address" value={editFormData.address} onChange={handleEditChange} className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg mt-1" rows="2" />
                                 </div>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
                                 <DetailRow label="Full Name" value={application.student_name} />
                                 <DetailRow label="Gender" value={application.gender} />
                                 <DetailRow label="Date of Birth" value={new Date(application.date_of_birth).toLocaleDateString('en-GB')} />
@@ -629,208 +689,329 @@ const ApplicationDetails = () => {
                                 <DetailRow label="Blood Group" value={application.blood_group} />
                                 <DetailRow label="Email" value={application.email} />
                                 <DetailRow label="Phone" value={application.phone} />
-                                <div className="md:col-span-2">
-                                    <DetailRow label="Address" value={application.address} />
-                                </div>
+                                <DetailRow label="Address" value={application.address} colSpan={2} />
                             </div>
                         )}
                     </Card>
 
                     {/* Uploaded Documents Section */}
-                    <Card title="📁 Uploaded Documents" className="shadow-sm border-slate-200">
+                    <Card title="📁 Uploaded Documents" className="shadow-2xs border-slate-200/80">
                         {/* Photos */}
-                        <div className="mb-4">
-                            <h4 className="text-sm font-bold text-slate-600 mb-3">📷 Photos</h4>
-                            <div className="flex flex-wrap gap-4">
+                        <div className="mb-3">
+                            <h4 className="text-xs font-bold text-slate-700 mb-2">📷 Photos</h4>
+                            <div className="flex flex-wrap gap-3">
                                 {/* Student Photo */}
                                 <div className="text-center">
-                                    <div className="w-20 h-20 rounded-lg border-2 border-cyan-200 overflow-hidden bg-slate-100 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 border-indigo-200 overflow-hidden bg-slate-100 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity shadow-2xs"
                                         onClick={() => application.student_photo && handlePreviewDoc(`${API_URL}${application.student_photo}`, 'Student Photo')}>
                                         {application.student_photo ? (
                                             <img src={`${API_URL}${application.student_photo}`} alt="Student" className="w-full h-full object-cover" />
                                         ) : (
-                                            <span className="text-2xl text-slate-300">👤</span>
+                                            <span className="text-xl text-slate-300">👤</span>
                                         )}
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-1">Student</p>
+                                    <p className="text-[10px] text-slate-600 font-bold mt-1">Student</p>
                                     <input type="file" accept="image/*" id="edit-student-photo" className="hidden" onChange={(e) => handleDocumentReplace('student_photo', e)} />
-                                    <label htmlFor="edit-student-photo" className="text-xs text-blue-600 cursor-pointer hover:underline">{application.student_photo ? 'Change' : 'Upload'}</label>
+                                    <label htmlFor="edit-student-photo" className="text-[10px] text-indigo-600 font-bold cursor-pointer hover:underline">{application.student_photo ? 'Change' : 'Upload'}</label>
                                 </div>
                                 {/* Father Photo */}
                                 <div className="text-center">
-                                    <div className="w-20 h-20 rounded-lg border-2 border-blue-200 overflow-hidden bg-slate-100 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 border-blue-200 overflow-hidden bg-slate-100 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity shadow-2xs"
                                         onClick={() => application.father_photo && handlePreviewDoc(`${API_URL}${application.father_photo}`, 'Father Photo')}>
                                         {application.father_photo ? (
                                             <img src={`${API_URL}${application.father_photo}`} alt="Father" className="w-full h-full object-cover" />
                                         ) : (
-                                            <span className="text-2xl text-slate-300">👨</span>
+                                            <span className="text-xl text-slate-300">👨</span>
                                         )}
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-1">Father</p>
+                                    <p className="text-[10px] text-slate-600 font-bold mt-1">Father</p>
                                     <input type="file" accept="image/*" id="edit-father-photo" className="hidden" onChange={(e) => handleDocumentReplace('father_photo', e)} />
-                                    <label htmlFor="edit-father-photo" className="text-xs text-blue-600 cursor-pointer hover:underline">{application.father_photo ? 'Change' : 'Upload'}</label>
+                                    <label htmlFor="edit-father-photo" className="text-[10px] text-indigo-600 font-bold cursor-pointer hover:underline">{application.father_photo ? 'Change' : 'Upload'}</label>
                                 </div>
                                 {/* Mother Photo */}
                                 <div className="text-center">
-                                    <div className="w-20 h-20 rounded-lg border-2 border-pink-200 overflow-hidden bg-slate-100 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 border-pink-200 overflow-hidden bg-slate-100 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity shadow-2xs"
                                         onClick={() => application.mother_photo && handlePreviewDoc(`${API_URL}${application.mother_photo}`, 'Mother Photo')}>
                                         {application.mother_photo ? (
                                             <img src={`${API_URL}${application.mother_photo}`} alt="Mother" className="w-full h-full object-cover" />
                                         ) : (
-                                            <span className="text-2xl text-slate-300">👩</span>
+                                            <span className="text-xl text-slate-300">👩</span>
                                         )}
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-1">Mother</p>
+                                    <p className="text-[10px] text-slate-600 font-bold mt-1">Mother</p>
                                     <input type="file" accept="image/*" id="edit-mother-photo" className="hidden" onChange={(e) => handleDocumentReplace('mother_photo', e)} />
-                                    <label htmlFor="edit-mother-photo" className="text-xs text-blue-600 cursor-pointer hover:underline">{application.mother_photo ? 'Change' : 'Upload'}</label>
+                                    <label htmlFor="edit-mother-photo" className="text-[10px] text-indigo-600 font-bold cursor-pointer hover:underline">{application.mother_photo ? 'Change' : 'Upload'}</label>
                                 </div>
                             </div>
                         </div>
                         {/* Aadhaar Cards */}
-                        <div className="mb-4">
-                            <h4 className="text-sm font-bold text-slate-600 mb-3">🪪 Aadhaar Cards</h4>
-                            <div className="flex flex-wrap gap-3">
-                                <div className="flex items-center gap-2">
+                        <div className="mb-3">
+                            <h4 className="text-xs font-bold text-slate-700 mb-2">🪪 Aadhaar Cards</h4>
+                            <div className="flex flex-wrap gap-2">
+                                <div className="flex items-center gap-1.5">
                                     {application.student_aadhaar ? (
-                                        <button onClick={() => handlePreviewDoc(`${API_URL}${application.student_aadhaar}`, 'Student Aadhaar')} className="px-3 py-2 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-700 hover:bg-orange-100 flex items-center gap-2">
-                                            <span>�️</span> View Student Aadhaar
+                                        <button onClick={() => handlePreviewDoc(`${API_URL}${application.student_aadhaar}`, 'Student Aadhaar')} className="px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg text-xs font-bold text-amber-800 hover:bg-amber-100 flex items-center gap-1">
+                                            <span>🖼️</span> Student Aadhaar
                                         </button>
                                     ) : (
-                                        <span className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-400">📄 Student</span>
+                                        <span className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-400">📄 Student</span>
                                     )}
                                     <input type="file" accept="image/*,.pdf" id="edit-student-aadhaar" className="hidden" onChange={(e) => handleDocumentReplace('student_aadhaar', e)} />
-                                    <label htmlFor="edit-student-aadhaar" className="text-xs text-blue-600 cursor-pointer hover:underline">{application.student_aadhaar ? 'Change' : 'Upload'}</label>
+                                    <label htmlFor="edit-student-aadhaar" className="text-[10px] text-indigo-600 font-bold cursor-pointer hover:underline">{application.student_aadhaar ? 'Change' : 'Upload'}</label>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5">
                                     {application.father_aadhaar ? (
-                                        <button onClick={() => handlePreviewDoc(`${API_URL}${application.father_aadhaar}`, 'Father Aadhaar')} className="px-3 py-2 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-700 hover:bg-orange-100 flex items-center gap-2">
-                                            <span>�️</span> View Father Aadhaar
+                                        <button onClick={() => handlePreviewDoc(`${API_URL}${application.father_aadhaar}`, 'Father Aadhaar')} className="px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg text-xs font-bold text-amber-800 hover:bg-amber-100 flex items-center gap-1">
+                                            <span>🖼️</span> Father Aadhaar
                                         </button>
                                     ) : (
-                                        <span className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-400">📄 Father</span>
+                                        <span className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-400">📄 Father</span>
                                     )}
                                     <input type="file" accept="image/*,.pdf" id="edit-father-aadhaar" className="hidden" onChange={(e) => handleDocumentReplace('father_aadhaar', e)} />
-                                    <label htmlFor="edit-father-aadhaar" className="text-xs text-blue-600 cursor-pointer hover:underline">{application.father_aadhaar ? 'Change' : 'Upload'}</label>
+                                    <label htmlFor="edit-father-aadhaar" className="text-[10px] text-indigo-600 font-bold cursor-pointer hover:underline">{application.father_aadhaar ? 'Change' : 'Upload'}</label>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5">
                                     {application.mother_aadhaar ? (
-                                        <button onClick={() => handlePreviewDoc(`${API_URL}${application.mother_aadhaar}`, 'Mother Aadhaar')} className="px-3 py-2 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-700 hover:bg-orange-100 flex items-center gap-2">
-                                            <span>�️</span> View Mother Aadhaar
+                                        <button onClick={() => handlePreviewDoc(`${API_URL}${application.mother_mother}`, 'Mother Aadhaar')} className="px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg text-xs font-bold text-amber-800 hover:bg-amber-100 flex items-center gap-1">
+                                            <span>🖼️</span> Mother Aadhaar
                                         </button>
                                     ) : (
-                                        <span className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-400">📄 Mother</span>
+                                        <span className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-400">📄 Mother</span>
                                     )}
                                     <input type="file" accept="image/*,.pdf" id="edit-mother-aadhaar" className="hidden" onChange={(e) => handleDocumentReplace('mother_aadhaar', e)} />
-                                    <label htmlFor="edit-mother-aadhaar" className="text-xs text-blue-600 cursor-pointer hover:underline">{application.mother_aadhaar ? 'Change' : 'Upload'}</label>
+                                    <label htmlFor="edit-mother-aadhaar" className="text-[10px] text-indigo-600 font-bold cursor-pointer hover:underline">{application.mother_aadhaar ? 'Change' : 'Upload'}</label>
                                 </div>
                             </div>
                         </div>
                         {/* PAN Cards */}
                         <div>
-                            <h4 className="text-sm font-bold text-slate-600 mb-3">💳 PAN Cards</h4>
-                            <div className="flex flex-wrap gap-3">
-                                <div className="flex items-center gap-2">
+                            <h4 className="text-xs font-bold text-slate-700 mb-2">💳 PAN Cards</h4>
+                            <div className="flex flex-wrap gap-2">
+                                <div className="flex items-center gap-1.5">
                                     {application.father_pan ? (
-                                        <button onClick={() => handlePreviewDoc(`${API_URL}${application.father_pan}`, 'Father PAN')} className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100 flex items-center gap-2">
-                                            <span>�️</span> View Father PAN
+                                        <button onClick={() => handlePreviewDoc(`${API_URL}${application.father_pan}`, 'Father PAN')} className="px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg text-xs font-bold text-blue-800 hover:bg-blue-100 flex items-center gap-1">
+                                            <span>🖼️</span> Father PAN
                                         </button>
                                     ) : (
-                                        <span className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-400">📄 Father</span>
+                                        <span className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-400">📄 Father</span>
                                     )}
                                     <input type="file" accept="image/*,.pdf" id="edit-father-pan" className="hidden" onChange={(e) => handleDocumentReplace('father_pan', e)} />
-                                    <label htmlFor="edit-father-pan" className="text-xs text-blue-600 cursor-pointer hover:underline">{application.father_pan ? 'Change' : 'Upload'}</label>
+                                    <label htmlFor="edit-father-pan" className="text-[10px] text-indigo-600 font-bold cursor-pointer hover:underline">{application.father_pan ? 'Change' : 'Upload'}</label>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5">
                                     {application.mother_pan ? (
-                                        <button onClick={() => handlePreviewDoc(`${API_URL}${application.mother_pan}`, 'Mother PAN')} className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 hover:bg-blue-100 flex items-center gap-2">
-                                            <span>�️</span> View Mother PAN
+                                        <button onClick={() => handlePreviewDoc(`${API_URL}${application.mother_pan}`, 'Mother PAN')} className="px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg text-xs font-bold text-blue-800 hover:bg-blue-100 flex items-center gap-1">
+                                            <span>🖼️</span> Mother PAN
                                         </button>
                                     ) : (
-                                        <span className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-400">📄 Mother</span>
+                                        <span className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-400">📄 Mother</span>
                                     )}
                                     <input type="file" accept="image/*,.pdf" id="edit-mother-pan" className="hidden" onChange={(e) => handleDocumentReplace('mother_pan', e)} />
-                                    <label htmlFor="edit-mother-pan" className="text-xs text-blue-600 cursor-pointer hover:underline">{application.mother_pan ? 'Change' : 'Upload'}</label>
+                                    <label htmlFor="edit-mother-pan" className="text-[10px] text-indigo-600 font-bold cursor-pointer hover:underline">{application.mother_pan ? 'Change' : 'Upload'}</label>
                                 </div>
                             </div>
                         </div>
                     </Card>
 
                     {/* Parents & Academic */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card title="Parents / Guardian" className="shadow-sm border-slate-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3.5">
+                        <Card title="Parents / Guardian" className="shadow-2xs border-slate-200/80">
                             {isEditing ? (
-                                <div className="space-y-4">
+                                <div className="space-y-2">
                                     <Input label="Father's Name" name="fatherName" value={editFormData.fatherName} onChange={handleEditChange} />
+                                    <Input label="Father's Phone" name="fatherPhone" value={editFormData.fatherPhone} onChange={handleEditChange} />
                                     <Input label="Mother's Name" name="motherName" value={editFormData.motherName} onChange={handleEditChange} />
-                                    <Input label="Parent Phone" name="parentPhone" value={editFormData.parentPhone} onChange={handleEditChange} />
+                                    <Input label="Mother's Phone" name="motherPhone" value={editFormData.motherPhone} onChange={handleEditChange} />
                                 </div>
                             ) : (
-                                <>
+                                <div className="space-y-2">
                                     <DetailRow label="Father's Name" value={application.father_name} />
+                                    <DetailRow label="Father's Phone" value={application.father_phone || application.parent_phone} />
                                     <DetailRow label="Mother's Name" value={application.mother_name} />
-                                    <DetailRow label="Contact Number" value={application.parent_phone} />
-                                </>
+                                    <DetailRow label="Mother's Phone" value={application.mother_phone || '-'} />
+                                </div>
                             )}
                         </Card>
-                        <Card title="Academic & Medical" className="shadow-sm border-slate-200">
+                        <Card title="Academic & Medical" className="shadow-2xs border-slate-200/80">
                             {isEditing ? (
-                                <div className="space-y-4">
+                                <div className="space-y-2">
                                     <Input label="Previous School" name="previousSchool" value={editFormData.previousSchool} onChange={handleEditChange} />
                                     <Input label="Previous Class" name="previousClass" value={editFormData.previousClass} onChange={handleEditChange} />
                                     <div>
-                                        <label className="text-sm font-medium text-slate-700">Medical Conditions</label>
-                                        <textarea name="medicalConditions" value={editFormData.medicalConditions} onChange={handleEditChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg mt-1" rows="2" />
+                                        <label className="text-xs font-bold text-slate-700">Medical Conditions</label>
+                                        <textarea name="medicalConditions" value={editFormData.medicalConditions} onChange={handleEditChange} className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg mt-1" rows="2" />
                                     </div>
                                 </div>
                             ) : (
-                                <>
+                                <div className="space-y-2">
                                     <DetailRow label="Previous School" value={application.previous_school} />
                                     <DetailRow label="Previous Class" value={application.previous_class} />
                                     <DetailRow label="Medical Conditions" value={application.medical_conditions} />
-                                </>
+                                </div>
                             )}
                         </Card>
                     </div>
                 </div>
 
-                {/* Sidebar: Status & Actions */}
-                <div className="space-y-6">
-                    <Card title="Application Status" className="shadow-md border-t-4 border-t-cyan-500">
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center py-2 border-b border-slate-100">
-                                <span className="text-slate-500 text-sm">Application ID</span>
-                                <span className="font-mono font-bold text-slate-800">#{application.application_no}</span>
+                {/* Sidebar: Status & Actions (Independent Scroll) */}
+                <div className="space-y-2.5 sm:space-y-3.5 lg:overflow-y-auto lg:pr-1.5 custom-scrollbar pb-6">
+                    <Card title="Application Status" className="shadow-2xs border-slate-200/80 border-l-[4px] border-l-indigo-600">
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                                <span className="text-slate-600 text-xs font-semibold">Application ID</span>
+                                <span className="font-mono font-bold text-slate-900 text-xs">#{application.application_no}</span>
                             </div>
-                            <div className="flex justify-between items-center py-2 border-b border-slate-100">
-                                <span className="text-slate-500 text-sm">Applied Date</span>
-                                <span className="font-medium text-slate-800">{new Date(application.applied_date).toLocaleDateString('en-GB')}</span>
+                            <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                                <span className="text-slate-600 text-xs font-semibold">Applied Date</span>
+                                <span className="font-bold text-slate-900 text-xs">{new Date(application.applied_date).toLocaleDateString('en-GB')}</span>
                             </div>
                             {application.status === 'admitted' && (
-                                <div className="p-3 bg-green-50 rounded-lg text-green-800 text-sm font-medium text-center">
-                                    Admitted on {new Date(application.admitted_date).toLocaleDateString('en-GB')}
+                                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-bold text-center mt-2">
+                                    🎉 Admitted on {new Date(application.admitted_date).toLocaleDateString('en-GB')}
                                 </div>
                             )}
                             {application.status === 'rejected' && (
-                                <div className="p-3 bg-red-50 rounded-lg text-red-800 text-sm font-medium">
-                                    <p className="font-bold mb-1">Rejected on {new Date(application.rejected_date).toLocaleDateString('en-GB')}</p>
-                                    <p className="text-xs">{application.rejection_reason}</p>
+                                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-medium mt-2">
+                                    <p className="font-bold mb-0.5">❌ Rejected on {new Date(application.rejected_date).toLocaleDateString('en-GB')}</p>
+                                    <p className="text-[11px] text-rose-700">{application.rejection_reason}</p>
                                 </div>
                             )}
                         </div>
                     </Card>
 
+                    {/* Fee Estimation Card */}
+                    <Card title="Fee Estimation" className="shadow-2xs border-slate-200/80 border-l-[4px] border-l-emerald-600">
+                        {loadingFee ? (
+                            <div className="py-4 text-center text-emerald-700 text-xs font-medium">
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600 mx-auto mb-1"></div>
+                                Fetching fee estimation...
+                            </div>
+                        ) : feeStructure ? (
+                            <div className="space-y-2.5">
+                                {/* Applicable Academic Months Badge */}
+                                {(() => {
+                                    let studentMonths = [];
+                                    if (application?.applicable_months) {
+                                        try {
+                                            studentMonths = typeof application.applicable_months === 'string'
+                                                ? JSON.parse(application.applicable_months)
+                                                : application.applicable_months;
+                                        } catch (e) {}
+                                    }
+                                    if (!Array.isArray(studentMonths) || studentMonths.length === 0) {
+                                        if (feeStructure?.applicable_months) {
+                                            studentMonths = feeStructure.applicable_months;
+                                        }
+                                    }
+                                    const monthsCount = (Array.isArray(studentMonths) && studentMonths.length > 0)
+                                        ? studentMonths.length
+                                        : (feeStructure?.months_count || 12);
+
+                                    return (
+                                        <>
+                                            <div className="flex flex-wrap items-center justify-between bg-emerald-100/90 p-2 rounded-lg text-[11px] text-emerald-900 font-bold border border-emerald-200 shadow-2xs gap-1">
+                                                <span className="flex items-center gap-1">🗓️ Applicable Months:</span>
+                                                <span className="bg-emerald-700 text-white px-2 py-0.5 rounded-md text-[10px] font-extrabold shadow-2xs">
+                                                    {monthsCount} Months {studentMonths.length > 0 && studentMonths.length < 12 ? `(${studentMonths[0]}–${studentMonths[studentMonths.length - 1]})` : '(Full Year)'}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex border-b border-emerald-200 pb-1 text-xs font-bold text-emerald-950">
+                                                <div className="flex-1">Fee Component</div>
+                                                <div className="text-right">Monthly / Unit</div>
+                                                <div className="w-24 text-right">Academic Total</div>
+                                            </div>
+
+                                            {(() => {
+                                                const admissionVal = Number(feeStructure.admission_fee || 0);
+
+                                                let items = [];
+                                                if (feeStructure.fee_columns && feeStructure.fee_columns.length > 0) {
+                                                    items = feeStructure.fee_columns.map(col => {
+                                                        let label = col.display_name;
+                                                        const isMonthly = label.toLowerCase().includes('tuition') || label.toLowerCase().includes('monthly');
+                                                        return {
+                                                            label: isMonthly && !label.toLowerCase().includes('monthly') ? `${label} (Monthly)` : label,
+                                                            monthlyVal: feeStructure.column_values?.[col.id] || 0,
+                                                            isMonthly
+                                                        };
+                                                    });
+                                                } else {
+                                                    items = [
+                                                        { label: 'Tuition (Monthly)', monthlyVal: Number(feeStructure.tuition_fee || 0), isMonthly: true },
+                                                        { label: 'Library Fee', monthlyVal: Number(feeStructure.library_fee || 0), isMonthly: false },
+                                                        { label: 'Sports Fee', monthlyVal: Number(feeStructure.sports_fee || 0), isMonthly: false },
+                                                        { label: 'Lab Fee', monthlyVal: Number(feeStructure.lab_fee || 0), isMonthly: false },
+                                                        { label: 'Exam Fee', monthlyVal: Number(feeStructure.exam_fee || 0), isMonthly: false },
+                                                        { label: 'Hostel Fee', monthlyVal: Number(feeStructure.hostel_fee || 0), isMonthly: false },
+                                                        { label: 'Misc Fee', monthlyVal: Number(feeStructure.misc_fee || 0), isMonthly: false }
+                                                    ];
+                                                }
+
+                                                let totalMonthlyRate = 0;
+                                                items.forEach(i => { if (i.monthlyVal > 0 && i.isMonthly) totalMonthlyRate += i.monthlyVal; });
+
+                                                const totalMonthlyAcademic = totalMonthlyRate * monthsCount;
+                                                const grandTotal = admissionVal + totalMonthlyAcademic;
+
+                                                return (
+                                                    <>
+                                                        {admissionVal > 0 && (
+                                                            <div className="flex justify-between items-center text-xs text-emerald-900">
+                                                                <span className="flex-1 font-medium">Admission (One-Time)</span>
+                                                                <span className="font-mono text-slate-500 text-[11px] text-right">One-Time</span>
+                                                                <span className="w-24 text-right font-mono font-semibold">₹{admissionVal.toLocaleString('en-IN')}</span>
+                                                            </div>
+                                                        )}
+
+                                                        {items.map(item => item.monthlyVal > 0 && (
+                                                            <div key={item.label} className="flex justify-between items-center text-xs text-emerald-900">
+                                                                <span className="flex-1 font-medium">{item.label}</span>
+                                                                <span className="font-mono text-emerald-700 text-[11px] text-right font-semibold">
+                                                                    ₹{item.monthlyVal.toLocaleString('en-IN')}/mo
+                                                                </span>
+                                                                <span className="w-24 text-right font-mono font-bold text-emerald-950">
+                                                                    ₹{(item.isMonthly ? item.monthlyVal * monthsCount : item.monthlyVal).toLocaleString('en-IN')}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+
+                                                        <div className="border-t border-dashed border-emerald-300 pt-2 mt-2 space-y-1">
+                                                            <div className="flex justify-between items-center text-xs text-emerald-900">
+                                                                <span className="font-semibold text-emerald-900">Monthly Total ({monthsCount} months)</span>
+                                                                <span className="font-mono font-bold text-emerald-800">₹{totalMonthlyAcademic.toLocaleString('en-IN')}</span>
+                                                            </div>
+                                                            <div className="flex justify-between items-center text-emerald-950 pt-1 border-t border-emerald-200">
+                                                                <span className="font-black text-xs">Total Estimated Academic Fee</span>
+                                                                <span className="font-black text-base font-mono text-emerald-700">₹{grandTotal.toLocaleString('en-IN')}</span>
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
+                                        </>
+                                    );
+                                })()}
+                            </div>
+                        ) : (
+                            <div className="text-center py-3 px-2 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-800 font-medium">
+                                ⚠️ No fee structure configured for Class {application.class}.
+                            </div>
+                        )}
+                    </Card>
+
                     {/* Action Cards for Pending state */}
                     {application.status === 'pending' && !isEditing && (
-                        <div className="space-y-4">
+                        <div className="space-y-2">
                             <button
                                 onClick={openAdmitModal}
-                                className="w-full p-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl shadow-lg shadow-green-200 hover:shadow-xl hover:scale-[1.02] transition-all font-bold text-lg flex items-center justify-center gap-2"
+                                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs transition-all font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                             >
                                 <span>✨</span> Confirm Admission
                             </button>
                             <button
                                 onClick={() => setShowRejectModal(true)}
-                                className="w-full p-4 bg-white border-2 border-red-100 text-red-600 rounded-xl hover:bg-red-50 transition-colors font-bold flex items-center justify-center gap-2"
+                                className="w-full py-2.5 px-4 bg-white border border-rose-200 text-rose-700 hover:bg-rose-50 rounded-xl transition-colors font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                             >
                                 <span>❌</span> Reject Application
                             </button>
@@ -878,65 +1059,57 @@ const ApplicationDetails = () => {
             </Modal>
 
             {/* Admit Student Modal */}
-            <Modal isOpen={showAdmitModal} onClose={() => setShowAdmitModal(false)} title="Confirm Admission">
-                <div className="space-y-6">
-                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                        <p className="text-slate-600 text-sm">Admitting Student:</p>
-                        <h3 className="text-lg font-bold text-slate-900">{application.student_name}</h3>
-                        <p className="text-slate-500 text-xs">Class {application.class}</p>
+            <Modal isOpen={showAdmitModal} onClose={() => setShowAdmitModal(false)} title="Confirm Admission" size="md">
+                <div className="space-y-3 text-xs">
+                    {/* Compact Student Header Banner */}
+                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
+                        <div>
+                            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">Admitting Student</span>
+                            <h3 className="text-sm font-extrabold text-slate-900 leading-tight">{application.student_name}</h3>
+                        </div>
+                        <span className="bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-lg text-xs font-bold">
+                            Class {application.class}
+                        </span>
                     </div>
 
-                    {/* Photo Upload Section */}
-                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-xl border border-blue-100">
-                        <label className="block text-sm font-bold text-slate-700 mb-3">📷 Student Photo (Optional)</label>
-                        <div className="flex items-center gap-4">
-                            <div className="w-24 h-24 rounded-xl bg-white border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden">
+                    {/* Compact Photo Upload Section */}
+                    <div className="bg-gradient-to-r from-blue-50/70 to-indigo-50/70 p-2.5 rounded-xl border border-blue-100 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-10 h-10 rounded-lg bg-white border border-slate-300 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
                                 {photoPreview ? (
                                     <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
                                 ) : application.student_photo ? (
                                     <img src={`${API_URL}${application.student_photo}`} alt="Student" className="w-full h-full object-cover" />
                                 ) : (
-                                    <span className="text-3xl text-slate-300">📷</span>
+                                    <span className="text-lg text-slate-400">📷</span>
                                 )}
                             </div>
-                            <div className="flex-1">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handlePhotoSelect}
-                                    className="hidden"
-                                    id="photo-upload"
-                                />
-                                <label
-                                    htmlFor="photo-upload"
-                                    className="inline-block px-4 py-2 bg-white border border-blue-200 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors font-medium text-sm"
-                                >
-                                    {(photoPreview || application.student_photo) ? 'Change Photo' : 'Upload Photo'}
-                                </label>
-                                {photoPreview && (
-                                    <button
-                                        type="button"
-                                        onClick={() => { setStudentPhoto(null); setPhotoPreview(null); }}
-                                        className="ml-2 text-red-500 text-sm hover:text-red-700"
-                                    >
-                                        Remove
-                                    </button>
-                                )}
-                                <p className="text-xs text-slate-500 mt-2">Max 5MB, JPG/PNG format</p>
-                                {application.student_photo && !photoPreview && (
-                                    <p className="text-xs text-green-600 mt-1">✅ Photo from application will be used</p>
-                                )}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-800">Student Photo</label>
+                                <p className="text-[10px] text-slate-500">Max 5MB, JPG/PNG</p>
                             </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                            <input type="file" accept="image/*" onChange={handlePhotoSelect} className="hidden" id="photo-upload" />
+                            <label htmlFor="photo-upload" className="px-2.5 py-1 bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 rounded-lg cursor-pointer font-bold text-[11px] transition-colors shadow-2xs">
+                                {(photoPreview || application.student_photo) ? 'Change' : 'Upload'}
+                            </label>
+                            {photoPreview && (
+                                <button type="button" onClick={() => { setStudentPhoto(null); setPhotoPreview(null); }} className="text-red-500 hover:text-red-700 text-[11px] font-bold px-1.5 py-1">
+                                    Remove
+                                </button>
+                            )}
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Assign Section</label>
+                    {/* Section Assignment & Fee Structure Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div className="sm:col-span-2">
+                            <label className="block text-xs font-bold text-slate-700 mb-1">Assign Section</label>
                             <select
                                 value={admitData.section}
                                 onChange={(e) => setAdmitData({ ...admitData, section: e.target.value })}
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg"
+                                className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-emerald-500 bg-white"
                                 disabled={sectionsLoading}
                             >
                                 {sectionsLoading ? (
@@ -951,75 +1124,107 @@ const ApplicationDetails = () => {
                                     ['A', 'B', 'C', 'D'].map(sec => <option key={sec} value={sec}>Section {sec}</option>)
                                 )}
                             </select>
-                            {classSections.length === 0 && !sectionsLoading && (
-                                <p className="text-xs text-yellow-600 mt-1">⚠️ Using default sections. Configure class-specific sections in Admin.</p>
-                            )}
                         </div>
 
-                        {/* Fee Structure Summary */}
-                        <div className="md:col-span-2">
-                            {loadingFee ? (
-                                <div className="p-4 bg-slate-50 text-center text-sm text-slate-500">Loading Fees...</div>
-                            ) : feeStructure ? (
-                                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
-                                    <h4 className="text-emerald-800 font-bold text-sm mb-3">Total Fee Structure</h4>
-                                    <div className="flex justify-between items-end mb-3">
-                                        <div>
-                                            <span className="text-xs text-emerald-600 uppercase font-bold">Admission Fee</span>
-                                            <p className="text-xl font-bold text-emerald-900">₹{Number(admitData.admissionFeeAmount).toLocaleString()}</p>
+                        {/* Fixed Total Fee Structure Card */}
+                        {(() => {
+                            let studentMonths = [];
+                            if (application?.applicable_months) {
+                                try {
+                                    studentMonths = typeof application.applicable_months === 'string'
+                                        ? JSON.parse(application.applicable_months)
+                                        : application.applicable_months;
+                                } catch (e) {}
+                            }
+                            if (!Array.isArray(studentMonths) || studentMonths.length === 0) {
+                                if (feeStructure?.applicable_months) {
+                                    studentMonths = feeStructure.applicable_months;
+                                }
+                            }
+                            const monthsCount = (Array.isArray(studentMonths) && studentMonths.length > 0)
+                                ? studentMonths.length
+                                : (feeStructure?.months_count || 12);
+
+                            return (
+                                <div className="sm:col-span-2 bg-emerald-50/90 border border-emerald-200 rounded-xl p-3 shadow-2xs space-y-2">
+                                    <div className="flex flex-wrap items-center justify-between border-b border-emerald-200/80 pb-1.5 gap-1">
+                                        <h4 className="text-emerald-950 font-extrabold text-xs flex items-center gap-1">
+                                            💳 Total Fee Structure
+                                        </h4>
+                                        {monthsCount > 0 && (
+                                            <span className="bg-emerald-700 text-white px-2 py-0.5 rounded-md text-[10px] font-extrabold shadow-2xs">
+                                                🗓️ {monthsCount} Months {studentMonths.length > 0 && studentMonths.length < 12 ? `(${studentMonths[0]}–${studentMonths[studentMonths.length - 1]})` : '(Full Year)'}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                        <div className="bg-white/80 p-2 rounded-lg border border-emerald-100">
+                                            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">Admission Fee</span>
+                                            <p className="text-sm font-black text-emerald-950 font-mono mt-0.5">
+                                                ₹{Number(admitData.admissionFeeAmount || 0).toLocaleString('en-IN')}
+                                            </p>
                                         </div>
-                                        <div className="text-right">
-                                            <span className="text-xs text-emerald-600 uppercase font-bold">Annual Fee</span>
-                                            <p className="text-xl font-bold text-emerald-900">₹{Number(admitData.annualFeeAmount).toLocaleString()}</p>
+                                        <div className="bg-white/80 p-2 rounded-lg border border-emerald-100 text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">Academic Fee</span>
+                                                <span className="text-[9px] text-emerald-600 font-extrabold">({monthsCount} mo)</span>
+                                            </div>
+                                            <p className="text-sm font-black text-emerald-950 font-mono mt-0.5">
+                                                ₹{Number(admitData.annualFeeAmount || 0).toLocaleString('en-IN')}
+                                            </p>
                                         </div>
                                     </div>
-                                    <div className="border-t border-emerald-200 pt-3 mt-3 flex justify-between items-center">
-                                        <span className="text-sm font-black text-emerald-800 uppercase tracking-wider">Total Amount</span>
-                                        <span className="text-2xl font-black text-emerald-900">
-                                            ₹{(Number(admitData.admissionFeeAmount) + Number(admitData.annualFeeAmount)).toLocaleString()}
+
+                                    <div className="border-t border-emerald-200 pt-1.5 flex justify-between items-center bg-emerald-100/70 p-2 rounded-lg">
+                                        <span className="text-xs font-black text-emerald-950 uppercase tracking-wider">Total Amount</span>
+                                        <span className="text-base font-black text-emerald-800 font-mono">
+                                            ₹{(Number(admitData.admissionFeeAmount || 0) + Number(admitData.annualFeeAmount || 0)).toLocaleString('en-IN')}
                                         </span>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="p-3 bg-yellow-50 text-yellow-700 text-sm">Fee structure not set. Enter amounts manually.</div>
-                            )}
-                        </div>
+                            );
+                        })()}
+                    </div>
 
-                        {/* Payment Inputs - Split Logic */}
-                        <div className="md:col-span-2 border-t pt-2">
-                            <h5 className="font-bold text-slate-700 mb-2">Admission Fee Payment</h5>
-                            <div className="grid grid-cols-2 gap-4">
+                    {/* Payment Details Section */}
+                    <div className="space-y-2 pt-1 border-t border-slate-200">
+                        {/* Admission Fee Payment */}
+                        <div className="bg-slate-50/90 p-2.5 rounded-xl border border-slate-200 space-y-1.5">
+                            <span className="text-[11px] font-extrabold text-slate-800 block">Admission Fee Payment</span>
+                            <div className="grid grid-cols-2 gap-2">
                                 <Input label="Amount Paid" type="number" value={admitData.admissionPaid} onChange={(e) => setAdmitData({ ...admitData, admissionPaid: e.target.value })} placeholder="₹ 0" />
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase">Method</label>
-                                    <select value={admitData.admissionPaymentMethod} onChange={(e) => setAdmitData({ ...admitData, admissionPaymentMethod: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg mt-1">
+                                    <label className="text-[10px] font-extrabold text-slate-500 uppercase">Method</label>
+                                    <select value={admitData.admissionPaymentMethod} onChange={(e) => setAdmitData({ ...admitData, admissionPaymentMethod: e.target.value })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-medium bg-white">
                                         <option value="offline">Offline / Cash</option>
                                         <option value="online">Online / UPI</option>
                                     </select>
                                 </div>
                             </div>
                             {admitData.admissionPaymentMethod === 'online' && Number(admitData.admissionPaid) > 0 && (
-                                <div className="grid grid-cols-2 gap-4 mt-2 bg-slate-50 p-3 rounded-lg">
+                                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/80">
                                     <Input label="Date" type="date" value={admitData.admissionPaymentDate} onChange={(e) => setAdmitData({ ...admitData, admissionPaymentDate: e.target.value })} />
                                     <Input label="Transaction ID" value={admitData.admissionTransactionId} onChange={(e) => setAdmitData({ ...admitData, admissionTransactionId: e.target.value })} />
                                 </div>
                             )}
                         </div>
 
-                        <div className="md:col-span-2 border-t pt-2">
-                            <h5 className="font-bold text-slate-700 mb-2">Annual Fee Payment</h5>
-                            <div className="grid grid-cols-2 gap-4">
+                        {/* Annual Fee Payment */}
+                        <div className="bg-slate-50/90 p-2.5 rounded-xl border border-slate-200 space-y-1.5">
+                            <span className="text-[11px] font-extrabold text-slate-800 block">Annual Fee Payment</span>
+                            <div className="grid grid-cols-2 gap-2">
                                 <Input label="Amount Paid" type="number" value={admitData.annualPaid} onChange={(e) => setAdmitData({ ...admitData, annualPaid: e.target.value })} placeholder="₹ 0" />
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase">Method</label>
-                                    <select value={admitData.annualPaymentMethod} onChange={(e) => setAdmitData({ ...admitData, annualPaymentMethod: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg mt-1">
+                                    <label className="text-[10px] font-extrabold text-slate-500 uppercase">Method</label>
+                                    <select value={admitData.annualPaymentMethod} onChange={(e) => setAdmitData({ ...admitData, annualPaymentMethod: e.target.value })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-medium bg-white">
                                         <option value="offline">Offline / Cash</option>
                                         <option value="online">Online / UPI</option>
                                     </select>
                                 </div>
                             </div>
                             {admitData.annualPaymentMethod === 'online' && Number(admitData.annualPaid) > 0 && (
-                                <div className="grid grid-cols-2 gap-4 mt-2 bg-slate-50 p-3 rounded-lg">
+                                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/80">
                                     <Input label="Date" type="date" value={admitData.annualPaymentDate} onChange={(e) => setAdmitData({ ...admitData, annualPaymentDate: e.target.value })} />
                                     <Input label="Transaction ID" value={admitData.annualTransactionId} onChange={(e) => setAdmitData({ ...admitData, annualTransactionId: e.target.value })} />
                                 </div>
@@ -1027,7 +1232,7 @@ const ApplicationDetails = () => {
                         </div>
                     </div>
 
-                    <div className="flex gap-3 justify-end mt-4">
+                    <div className="flex gap-2 justify-end pt-2 border-t border-slate-200">
                         <Button variant="secondary" onClick={() => setShowAdmitModal(false)}>Cancel</Button>
                         <Button variant="success" onClick={handleAdmit} disabled={processing}>
                             {processing ? 'Processing...' : 'Confirm Admission'}

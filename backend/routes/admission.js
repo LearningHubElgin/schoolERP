@@ -58,6 +58,25 @@ const uploadApplicationDocs = multer({
     }
 });
 
+// Ensure required columns exist on student_applications table
+(async () => {
+    try {
+        await db.query(`ALTER TABLE student_applications ADD COLUMN IF NOT EXISTS father_phone VARCHAR(20) DEFAULT NULL`);
+    } catch (e) {
+        try { await db.query(`ALTER TABLE student_applications ADD COLUMN father_phone VARCHAR(20) DEFAULT NULL`); } catch (err) {}
+    }
+    try {
+        await db.query(`ALTER TABLE student_applications ADD COLUMN IF NOT EXISTS mother_phone VARCHAR(20) DEFAULT NULL`);
+    } catch (e) {
+        try { await db.query(`ALTER TABLE student_applications ADD COLUMN mother_phone VARCHAR(20) DEFAULT NULL`); } catch (err) {}
+    }
+    try {
+        await db.query(`ALTER TABLE student_applications ADD COLUMN IF NOT EXISTS applicable_months TEXT DEFAULT NULL`);
+    } catch (e) {
+        try { await db.query(`ALTER TABLE student_applications ADD COLUMN applicable_months TEXT DEFAULT NULL`); } catch (err) {}
+    }
+})();
+
 // ============================================
 // PUBLIC ROUTES - No authentication required
 // ============================================
@@ -65,71 +84,63 @@ const uploadApplicationDocs = multer({
 // @route   POST /api/admission/applications
 // @desc    Create new application (PUBLIC)
 // @access  Public
-router.post('/applications', async (req, res) => {
+router.post('/applications', uploadApplicationDocs.fields([
+    { name: 'student_photo', maxCount: 1 },
+    { name: 'father_photo', maxCount: 1 },
+    { name: 'mother_photo', maxCount: 1 },
+    { name: 'student_aadhaar', maxCount: 1 },
+    { name: 'father_aadhaar', maxCount: 1 },
+    { name: 'mother_aadhaar', maxCount: 1 },
+    { name: 'father_pan', maxCount: 1 },
+    { name: 'mother_pan', maxCount: 1 }
+]), async (req, res) => {
     try {
         const {
             studentName, dateOfBirth, gender, class: studentClass, stream_id, fatherName, motherName,
-            phone, parentPhone, email, address, previousSchool, previousClass, bloodGroup, medicalConditions
+            fatherPhone, motherPhone, phone, email, address, previousSchool, previousClass, bloodGroup, medicalConditions,
+            applicable_months
         } = req.body;
 
-        if (!studentName || !dateOfBirth || !gender || !studentClass || !fatherName || !motherName || !phone || !address) {
+        if (!studentName || !dateOfBirth || !gender || !studentClass) {
             return res.status(400).json({
                 success: false,
-                message: 'Please provide all required fields'
+                message: 'Please provide all required fields (Student Name, Date of Birth, Gender, Class)'
             });
         }
 
-        // Check if student phone number is already in use (must be unique)
-        const [existingUser] = await db.query(
-            'SELECT id FROM users WHERE phone = ?',
-            [phone]
-        );
-        if (existingUser.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'This student phone number is already registered. Please use a different phone number.'
-            });
-        }
+        const fPhone = fatherPhone || null;
+        const mPhone = motherPhone || null;
+        const parentPhoneVal = fPhone || mPhone || null;
+        const studentPhoneVal = (phone && phone.trim() !== '') ? phone.trim() : null;
 
-        // Also check pending/admitted applications with same phone
-        const [existingApp] = await db.query(
-            "SELECT id FROM student_applications WHERE phone = ? AND status NOT IN ('rejected')",
-            [phone]
-        );
-        if (existingApp.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'An application with this student phone number already exists.'
-            });
-        }
-
-        // Check if student email is already in use (must be unique)
-        if (email && email.trim() !== '') {
-            const [existingEmailUser] = await db.query(
-                'SELECT id FROM users WHERE email = ?',
-                [email]
+        // Check if student phone number is already in use (if provided)
+        if (studentPhoneVal) {
+            const [existingUser] = await db.query(
+                'SELECT id FROM users WHERE phone = ? AND school_id = ?',
+                [studentPhoneVal, req.body.school_id || 1]
             );
-            if (existingEmailUser.length > 0) {
+
+            if (existingUser.length > 0) {
                 return res.status(400).json({
                     success: false,
-                    message: 'This email is already registered. Please use a different email.'
+                    message: 'Student phone number is already registered'
                 });
             }
 
-            // Also check pending/admitted applications with same email
-            const [existingEmailApp] = await db.query(
-                "SELECT id FROM student_applications WHERE email = ? AND status NOT IN ('rejected')",
-                [email]
+            const [existingApp] = await db.query(
+                'SELECT id FROM student_applications WHERE phone = ? AND school_id = ? AND status != "rejected"',
+                [studentPhoneVal, req.body.school_id || 1]
             );
-            if (existingEmailApp.length > 0) {
+
+            if (existingApp.length > 0) {
                 return res.status(400).json({
                     success: false,
-                    message: 'An application with this email already exists.'
+                    message: 'An application with this student phone number already exists'
                 });
             }
         }
 
-        // Generate application number
+        // Generate Application Number
         const [lastApp] = await db.query(
             'SELECT application_no FROM student_applications ORDER BY id DESC LIMIT 1'
         );
@@ -142,24 +153,43 @@ router.post('/applications', async (req, res) => {
             applicationNo = 'APP2026001';
         }
 
-        // Default to school_id = 1 if not provided (can be updated by frontend)
         const schoolId = req.body.school_id || 1;
+
+        const files = req.files || {};
+        const studentPhoto = files.student_photo ? `/upload/student_photos/${files.student_photo[0].filename}` : null;
+        const fatherPhoto = files.father_photo ? `/upload/application_documents/${files.father_photo[0].filename}` : null;
+        const motherPhoto = files.mother_photo ? `/upload/application_documents/${files.mother_photo[0].filename}` : null;
+        const studentAadhaar = files.student_aadhaar ? `/upload/application_documents/${files.student_aadhaar[0].filename}` : null;
+        const fatherAadhaar = files.father_aadhaar ? `/upload/application_documents/${files.father_aadhaar[0].filename}` : null;
+        const motherAadhaar = files.mother_aadhaar ? `/upload/application_documents/${files.mother_aadhaar[0].filename}` : null;
+        const fatherPan = files.father_pan ? `/upload/application_documents/${files.father_pan[0].filename}` : null;
+        const motherPan = files.mother_pan ? `/upload/application_documents/${files.mother_pan[0].filename}` : null;
+
+        const applicableMonthsStr = Array.isArray(applicable_months) ? JSON.stringify(applicable_months) : (applicable_months || null);
 
         const [result] = await db.query(
             `INSERT INTO student_applications 
        (application_no, student_name, date_of_birth, gender, class, stream_id, father_name, mother_name, 
-        phone, parent_phone, email, address, previous_school, previous_class, blood_group, 
-        medical_conditions, applied_date, processed_by, school_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), NULL, ?)`,
-            [applicationNo, studentName, dateOfBirth, gender, studentClass, stream_id || null, fatherName, motherName,
-                phone, parentPhone || null, email, address, previousSchool, previousClass, bloodGroup, medicalConditions, schoolId]
+        father_phone, mother_phone, phone, parent_phone, email, address, previous_school, previous_class, blood_group, 
+        medical_conditions, student_photo, father_photo, mother_photo, student_aadhaar, father_aadhaar, mother_aadhaar, father_pan, mother_pan, applicable_months, applied_date, processed_by, school_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), NULL, ?)`,
+            [
+                applicationNo, studentName, dateOfBirth, gender, studentClass, stream_id || null, fatherName || '', motherName || '',
+                fPhone, mPhone, studentPhoneVal || '', parentPhoneVal || '', email || '', address || '', previousSchool || null, previousClass || null, bloodGroup || null, medicalConditions || null,
+                studentPhoto, fatherPhoto, motherPhoto, studentAadhaar, fatherAadhaar, motherAadhaar, fatherPan, motherPan,
+                applicableMonthsStr, schoolId
+            ]
         );
 
         res.status(201).json({
             success: true,
             message: 'Application created successfully',
             applicationId: result.insertId,
-            applicationNo
+            applicationNo,
+            application: {
+                id: result.insertId,
+                application_no: applicationNo
+            }
         });
     } catch (error) {
         console.error('Create application error:', error);
@@ -545,13 +575,39 @@ router.get('/fee-structure/:classNumber', async (req, res) => {
             }
         } catch (e) { /* fee_column_types may not exist yet */ }
 
+        // Fetch applicable months for this class if configured
+        let applicableMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        let monthsCount = 12;
+        try {
+            const cleanCls = String(classNumber).replace(/^Class\s+/i, '').replace(/\s+Only$/i, '').trim();
+            const [disc] = await db.query(`
+                SELECT sfd.applicable_months 
+                FROM student_fee_discounts sfd
+                JOIN students s ON s.id = sfd.student_id
+                WHERE s.school_id = ? AND (s.class = ? OR s.class = ? OR s.class LIKE ?) AND sfd.applicable_months IS NOT NULL
+                LIMIT 1
+            `, [schoolId, classNumber, cleanCls, `Class ${cleanCls}%`]);
+
+            if (disc.length > 0 && disc[0].applicable_months) {
+                const parsed = typeof disc[0].applicable_months === 'string' ? JSON.parse(disc[0].applicable_months) : disc[0].applicable_months;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    applicableMonths = parsed;
+                    monthsCount = parsed.length;
+                }
+            }
+        } catch (e) {
+            console.error('Error fetching applicable months for fee-structure:', e);
+        }
+
         res.json({
             success: true,
             feeStructure: {
                 ...feeStructure[0],
                 admission_fee: admissionFee,
                 fee_columns: feeColumnsData,
-                column_values: columnValues
+                column_values: columnValues,
+                applicable_months: applicableMonths,
+                months_count: monthsCount
             }
         });
     } catch (error) {
@@ -909,8 +965,8 @@ router.put('/applications/:id/admit', authMiddleware, roleMiddleware('admission'
                     application.address,
                     application.father_name,
                     application.mother_name,
-                    application.parent_phone, // father_phone
-                    application.parent_phone, // mother_phone
+                    application.father_phone || application.parent_phone || null, // father_phone
+                    application.mother_phone || null,                             // mother_phone
                     application.phone,        // student phone
                     application.email || null,// student email (nullable)
                     application.blood_group,
@@ -931,6 +987,14 @@ router.put('/applications/:id/admit', authMiddleware, roleMiddleware('admission'
 
 
             const studentId = studentResult.insertId;
+
+            if (application.applicable_months) {
+                await connection.query(`
+                    INSERT INTO student_fee_discounts (school_id, student_id, applicable_months)
+                    VALUES (?, ?, ?)
+                    ON DUPLICATE KEY UPDATE applicable_months = VALUES(applicable_months)
+                `, [schoolId, studentId, application.applicable_months]);
+            }
 
             // Step E: Create Fee Records (Admission and Annual separately)
             const academicYear = `${currentYear}-${currentYear + 1}`;
@@ -1168,15 +1232,20 @@ router.put('/applications/:id', authMiddleware, roleMiddleware('admission'), asy
     try {
         const {
             studentName, dateOfBirth, class: studentClass, stream_id, fatherName, motherName,
-            phone, parentPhone, email, address, previousSchool, previousClass, bloodGroup, medicalConditions
+            fatherPhone, motherPhone, phone, email, address, previousSchool, previousClass, bloodGroup, medicalConditions
         } = req.body;
 
-        if (!studentName || !dateOfBirth || !studentClass || !fatherName || !motherName || !phone || !address) {
+        if (!studentName || !dateOfBirth || !studentClass) {
             return res.status(400).json({
                 success: false,
                 message: 'Please provide all required fields'
             });
         }
+
+        const fPhone = fatherPhone || null;
+        const mPhone = motherPhone || null;
+        const parentPhoneVal = fPhone || mPhone || null;
+        const studentPhoneVal = (phone && phone.trim() !== '') ? phone.trim() : null;
 
         // Check if application exists
         const [applications] = await db.query(
@@ -1195,10 +1264,10 @@ router.put('/applications/:id', authMiddleware, roleMiddleware('admission'), asy
         await db.query(
             `UPDATE student_applications 
              SET student_name = ?, date_of_birth = ?, class = ?, stream_id = ?, father_name = ?, mother_name = ?, 
-             phone = ?, parent_phone = ?, email = ?, address = ?, previous_school = ?, previous_class = ?, blood_group = ?, 
+             father_phone = ?, mother_phone = ?, phone = ?, parent_phone = ?, email = ?, address = ?, previous_school = ?, previous_class = ?, blood_group = ?, 
              medical_conditions = ?
              WHERE id = ?`,
-            [studentName, dateOfBirth, studentClass, stream_id || null, fatherName, motherName, phone, parentPhone || null, email, address,
+            [studentName, dateOfBirth, studentClass, stream_id || null, fatherName, motherName, fPhone, mPhone, studentPhoneVal, parentPhoneVal, email, address,
                 previousSchool, previousClass, bloodGroup, medicalConditions, req.params.id]
         );
 

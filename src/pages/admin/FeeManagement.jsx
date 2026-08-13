@@ -36,6 +36,9 @@ const FeeManagement = () => {
     // Delete confirmation
     const [deleteConfirm, setDeleteConfirm] = useState(null);
 
+    // Fee Cycle
+    const [feeCycle, setFeeCycle] = useState('monthly');
+
     // Retention Fee Policies
     const [failPolicy, setFailPolicy] = useState('require');
     const [repeatPolicy, setRepeatPolicy] = useState('require');
@@ -46,7 +49,17 @@ const FeeManagement = () => {
         fetchFeeStructures();
         fetchAdmissionFee();
         fetchRetentionPolicies();
+        fetchSchoolSettings();
     }, []);
+
+    const fetchSchoolSettings = async () => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/api/admin/settings`, getAuthHeaders());
+            if (response.data.success && response.data.school) {
+                setFeeCycle(response.data.school.fee_collection_cycle || 'monthly');
+            }
+        } catch (err) {}
+    };
 
     const getAuthHeaders = () => ({
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -311,6 +324,12 @@ const FeeManagement = () => {
                         <p className="mt-1 text-emerald-100 text-xs md:text-sm">
                             Configure admission and annual class fee structures.
                         </p>
+                    </div>
+                    <div className="bg-white/15 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/20 text-xs font-bold flex items-center gap-2 shadow-xs">
+                        <span className="text-emerald-100">Fee Collection Cycle:</span>
+                        <span className="bg-white text-emerald-800 px-2.5 py-1 rounded-lg uppercase tracking-wider font-extrabold text-[11px] shadow-xs">
+                            {feeCycle === 'yearly' ? '🗓️ Yearly / Annual Collection' : feeCycle === 'quarterly' ? '📆 Quarterly Collection' : feeCycle === 'half_yearly' ? '🌗 Half-Yearly Collection' : '📅 Monthly Collection'}
+                        </span>
                     </div>
                 </div>
                 <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-white opacity-10 blur-3xl"></div>
@@ -642,7 +661,7 @@ const FeeManagement = () => {
                                     </th>
                                 ))}
                                 <th className="px-2 py-3 md:px-6 md:py-4 text-right text-[10px] md:text-xs font-bold text-emerald-700 uppercase tracking-wider bg-emerald-50/30">
-                                    Total (Annual)
+                                    {feeCycle === 'yearly' ? 'Total (Annual)' : feeCycle === 'quarterly' ? 'Total (Quarterly)' : feeCycle === 'half_yearly' ? 'Total (Half-Yearly)' : 'Total (Monthly)'}
                                 </th>
                                 <th className="px-2 py-3 md:px-6 md:py-4 text-center text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-wider">
                                     Status
@@ -670,8 +689,15 @@ const FeeManagement = () => {
                                             {formatCurrency(classItem.column_values?.[col.id] || 0)}
                                         </td>
                                     ))}
-                                    <td className="px-2 py-3 md:px-6 md:py-4 whitespace-nowrap text-right bg-emerald-50/10 text-xs md:text-sm font-bold text-emerald-700">
-                                        {formatCurrency(classItem.total_fee)}
+                                    <td className="px-2 py-3 md:px-6 md:py-4 whitespace-nowrap text-right bg-emerald-50/10">
+                                        <span className="text-xs md:text-sm font-extrabold text-emerald-700 block">
+                                            {formatCurrency(classItem.total_fee)}{feeCycle === 'monthly' ? ' / mo' : feeCycle === 'quarterly' ? ' / qtr' : ''}
+                                        </span>
+                                        {feeCycle === 'monthly' && parseFloat(classItem.total_fee || 0) > 0 && (
+                                            <span className="text-[10px] text-slate-400 font-medium block">
+                                                ({formatCurrency(classItem.total_fee * 12)} / yr)
+                                            </span>
+                                        )}
                                     </td>
                                     <td className="px-2 py-3 md:px-6 md:py-4 whitespace-nowrap text-center text-xs">
                                         <Badge variant={classItem.has_config ? 'success' : 'warning'} className="shadow-sm !text-[9px] md:!text-xs !px-1.5 !py-0.5">
@@ -706,7 +732,7 @@ const FeeManagement = () => {
                                         💸 Configure Fees
                                     </h2>
                                     <p className="text-sm text-slate-500 mt-0.5">
-                                        Setting structure for <span className="font-bold text-slate-800">{selectedClass.class_name}</span>
+                                        Setting <span className="font-semibold text-emerald-700">{feeCycle === 'monthly' ? 'monthly' : feeCycle === 'yearly' ? 'annual' : feeCycle}</span> fee structure for <span className="font-bold text-slate-800">{selectedClass.class_name}</span>
                                     </p>
                                 </div>
                                 <button
@@ -726,7 +752,7 @@ const FeeManagement = () => {
                                 {feeColumns.map((col, idx) => (
                                     <div key={col.id}>
                                         <label className={`block text-xs font-bold uppercase tracking-wide mb-1.5 ${idx === 0 ? 'text-slate-500' : 'text-slate-400'}`}>
-                                            {col.display_name} Fee {idx === 0 && <span className="text-red-500">*</span>}
+                                            {col.display_name} ({feeCycle === 'monthly' ? 'Monthly' : feeCycle === 'yearly' ? 'Annual' : 'Amount'}) {idx === 0 && <span className="text-red-500">*</span>}
                                         </label>
                                         <input
                                             type="number"
@@ -743,12 +769,23 @@ const FeeManagement = () => {
                             {/* Total Calculation */}
                             <div className="mt-8 p-5 bg-emerald-50 rounded-xl border border-emerald-100 flex justify-between items-center">
                                 <div>
-                                    <span className="block text-xs font-bold text-emerald-600 uppercase tracking-wide">Total Annual Fee</span>
-                                    <span className="text-xs text-emerald-500">Calculated sum of all components</span>
+                                    <span className="block text-xs font-bold text-emerald-600 uppercase tracking-wide">
+                                        Total {feeCycle === 'monthly' ? 'Monthly' : feeCycle === 'yearly' ? 'Annual' : 'Fee'} Amount
+                                    </span>
+                                    <span className="text-xs text-emerald-500">
+                                        {feeCycle === 'monthly' ? 'Calculated monthly fee sum' : 'Calculated annual sum of all components'}
+                                    </span>
                                 </div>
-                                <span className="text-3xl font-bold text-emerald-600">
-                                    {formatCurrency(calculateTotal())}
-                                </span>
+                                <div className="text-right">
+                                    <span className="text-2xl md:text-3xl font-bold text-emerald-600 block">
+                                        {formatCurrency(calculateTotal())}{feeCycle === 'monthly' ? ' / mo' : ''}
+                                    </span>
+                                    {feeCycle === 'monthly' && calculateTotal() > 0 && (
+                                        <span className="text-xs font-semibold text-slate-500 block mt-0.5">
+                                            Equivalent to {formatCurrency(calculateTotal() * 12)} / year (12 months)
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
 

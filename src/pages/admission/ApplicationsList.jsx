@@ -4,7 +4,7 @@ import { API_URL } from '../../productionLink/productionLink';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
+import Table from '../../components/ui/Table';
 
 const ApplicationsList = () => {
     const navigate = useNavigate();
@@ -20,12 +20,8 @@ const ApplicationsList = () => {
 
     const fetchApplications = async () => {
         try {
-            // Get school_id from localStorage (set during login as 'schoolId')
             const schoolId = localStorage.getItem('schoolId');
-
             const queryParam = schoolId ? `?school_id=${schoolId}` : '';
-
-            // Fetch applications with school filter
             const response = await fetch(`${API_URL}/api/admission/applications${queryParam}`);
             const data = await response.json();
 
@@ -42,7 +38,8 @@ const ApplicationsList = () => {
         }
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (id, e) => {
+        if (e) e.stopPropagation();
         if (!window.confirm('Are you sure you want to delete this application?')) {
             return;
         }
@@ -60,7 +57,6 @@ const ApplicationsList = () => {
 
             if (data.success) {
                 setApplications(prev => prev.filter(app => app.id !== id));
-                alert('Application deleted successfully');
             } else {
                 alert(data.message || 'Failed to delete application');
             }
@@ -86,278 +82,218 @@ const ApplicationsList = () => {
 
     // Filter applications
     const filteredApplications = applications.filter((app) => {
-        const matchesSearch = app.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            app.application_no.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = filterStatus === 'All' || app.status.toLowerCase() === filterStatus.toLowerCase();
+        const matchesSearch = (app.student_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (app.application_no || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (app.class ? String(app.class) : '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = filterStatus === 'All' || (app.status || '').toLowerCase() === filterStatus.toLowerCase();
         return matchesSearch && matchesStatus;
     });
 
     const statusCounts = {
         All: applications.length,
-        Pending: applications.filter(a => a.status.toLowerCase() === 'pending').length,
-        Admitted: applications.filter(a => a.status.toLowerCase() === 'admitted').length,
-        Rejected: applications.filter(a => a.status.toLowerCase() === 'rejected').length,
+        Pending: applications.filter(a => (a.status || '').toLowerCase() === 'pending').length,
+        Admitted: applications.filter(a => (a.status || '').toLowerCase() === 'admitted').length,
+        Rejected: applications.filter(a => (a.status || '').toLowerCase() === 'rejected').length,
     };
 
-    // Helper Stat Card
-    const StatCard = ({ title, value, icon, color, active, onClick }) => (
-        <div
-            onClick={onClick}
-            className={`p-4 rounded-xl shadow-sm border cursor-pointer transition-all ${active
-                ? `bg-${color}-100 border-${color}-300 ring-2 ring-${color}-100`
-                : `bg-${color}-50/60 border-${color}-100 hover:bg-${color}-50 hover:border-${color}-200`
-                }`}
-        >
-            <div className="flex items-center justify-between">
+    const columns = [
+        {
+            header: 'App No',
+            render: (row) => (
+                <span className="font-bold text-slate-700 text-xs">#{row.application_no}</span>
+            )
+        },
+        {
+            header: 'Candidate Info',
+            render: (row) => (
                 <div>
-                    <p className={`text-xs font-semibold uppercase tracking-wide ${active ? `text-${color}-700` : `text-${color}-600/70`}`}>
-                        {title}
-                    </p>
-                    <h3 className={`text-2xl font-bold mt-1 ${active ? `text-${color}-900` : `text-${color}-800`}`}>
-                        {value}
-                    </h3>
+                    <span className="font-bold text-slate-900 text-xs block">{row.student_name}</span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                        {row.father_name && `F: ${row.father_name}`} {row.phone && `• 📞 ${row.phone}`}
+                    </span>
                 </div>
-                <div className={`p-3 rounded-full transition-all duration-300 ${active ? `bg-${color}-600 text-white` : `bg-${color}-100 text-${color}-600`}`}>
-                    {icon}
+            )
+        },
+        {
+            header: 'Class',
+            render: (row) => (
+                <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded text-xs font-bold text-slate-700">Class {row.class}</span>
+            )
+        },
+        {
+            header: 'Applied Date',
+            render: (row) => (
+                <div>
+                    <span className="text-xs font-medium text-slate-700 block">{new Date(row.applied_date).toLocaleDateString('en-GB')}</span>
+                    <span className="text-[10px] text-slate-400 block">
+                        {row.created_at ? new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : ''}
+                    </span>
                 </div>
-            </div>
-        </div>
-    );
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto"></div>
-                    <p className="mt-4 text-slate-500">Loading applications...</p>
+            )
+        },
+        {
+            header: 'Status',
+            render: (row) => (
+                <Badge variant={getStatusBadge(row.status)} size="sm">
+                    {row.status ? row.status.charAt(0).toUpperCase() + row.status.slice(1) : 'Pending'}
+                </Badge>
+            )
+        },
+        {
+            header: 'Actions',
+            render: (row) => (
+                <div className="flex items-center gap-1.5">
+                    <button
+                        onClick={() => navigate(`/admission/applications/${row.id}`)}
+                        className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                    >
+                        View Details
+                    </button>
+                    <button
+                        onClick={(e) => handleDelete(row.id, e)}
+                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title="Delete Application"
+                    >
+                        ❌
+                    </button>
                 </div>
-            </div>
-        );
-    }
+            )
+        }
+    ];
 
     return (
-        <div className="space-y-4 md:space-y-8 pb-8">
+        <div className="space-y-2.5 sm:space-y-3.5 pb-6">
             {/* Header Banner */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 p-4 md:p-8 text-white shadow-xl">
-                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h1 className="text-xl md:text-3xl font-bold tracking-tight">Student Applications 📂</h1>
-                        <p className="mt-2 text-cyan-100 text-sm md:text-lg">
-                            Review and manage incoming student entries and admissions.
-                        </p>
-                    </div>
-                    <Button
-                        variant="secondary"
-                        className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 backdrop-blur-sm shadow-lg"
-                        onClick={() => navigate('/admission/new-application')}
-                    >
-                        + Create New Application
-                    </Button>
+            <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 p-2.5 sm:p-5 text-white shadow-md sm:shadow-lg flex flex-row items-center justify-between gap-2 sm:gap-3">
+                <div className="relative z-10">
+                    <h1 className="text-xs sm:text-xl font-bold tracking-tight flex items-center gap-1.5 sm:gap-2">
+                        <span className="text-sm sm:text-xl">📂</span> Student Applications
+                    </h1>
+                    <p className="mt-0.5 text-blue-100 text-[9px] sm:text-xs font-medium hidden xs:block">
+                        Review and manage incoming student entries and admissions
+                    </p>
                 </div>
-                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-white opacity-10 blur-3xl"></div>
-                <div className="absolute bottom-0 right-20 -mb-20 w-60 h-60 rounded-full bg-blue-400 opacity-20 blur-3xl"></div>
+                <button
+                    onClick={() => navigate('/admission/new-application')}
+                    className="px-2 py-1 sm:px-4 sm:py-2 bg-white text-indigo-700 hover:bg-blue-50 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-extrabold transition-all shadow-sm shrink-0 flex items-center gap-1 cursor-pointer border border-white/40"
+                >
+                    <span>➕</span> <span className="hidden xs:inline">New Application</span><span className="xs:hidden">New App</span>
+                </button>
+                <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
             </div>
 
             {/* Error Message */}
             {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-xs flex items-center gap-2">
                     <span>⚠️</span> {error}
                 </div>
             )}
 
             {/* Stats Filter Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                <StatCard
-                    title="All Applications"
-                    value={statusCounts.All}
-                    icon={<span className="text-xl">📄</span>}
-                    color="blue"
-                    active={filterStatus === 'All'}
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                <Card
                     onClick={() => setFilterStatus('All')}
-                />
-                <StatCard
-                    title="Pending"
-                    value={statusCounts.Pending}
-                    icon={<span className="text-xl">⏳</span>}
-                    color="orange"
-                    active={filterStatus === 'Pending'}
+                    className={`!p-0 cursor-pointer transition-all shadow-2xs ${filterStatus === 'All'
+                        ? '!bg-gradient-to-r !from-indigo-100/90 !to-white !border-indigo-400 !border-l-[4px] !border-l-indigo-600 ring-2 ring-indigo-200'
+                        : '!bg-gradient-to-r !from-indigo-50/90 !via-indigo-50/40 !to-white !border-indigo-200/90 !border-l-[4px] !border-l-indigo-600 hover:!border-indigo-400'
+                        }`}
+                >
+                    <div className="p-2.5 sm:p-3.5 flex items-center justify-between gap-1.5">
+                        <div>
+                            <p className="text-xs sm:text-xs font-bold text-indigo-950 tracking-tight leading-tight">All Applications</p>
+                            <p className="text-lg sm:text-2xl font-bold text-indigo-700 mt-1 leading-none">
+                                {statusCounts.All}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-indigo-700/80 font-medium mt-1">Total submitted</p>
+                        </div>
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-indigo-100/90 border border-indigo-300 text-indigo-700 font-bold text-sm sm:text-lg flex items-center justify-center shrink-0 shadow-2xs">📄</div>
+                    </div>
+                </Card>
+
+                <Card
                     onClick={() => setFilterStatus('Pending')}
-                />
-                <StatCard
-                    title="Admitted"
-                    value={statusCounts.Admitted}
-                    icon={<span className="text-xl">🎉</span>}
-                    color="green"
-                    active={filterStatus === 'Admitted'}
+                    className={`!p-0 cursor-pointer transition-all shadow-2xs ${filterStatus === 'Pending'
+                        ? '!bg-gradient-to-r !from-amber-100/90 !to-white !border-amber-400 !border-l-[4px] !border-l-amber-500 ring-2 ring-amber-200'
+                        : '!bg-gradient-to-r !from-amber-50/90 !via-amber-50/40 !to-white !border-amber-200/90 !border-l-[4px] !border-l-amber-500 hover:!border-amber-400'
+                        }`}
+                >
+                    <div className="p-2.5 sm:p-3.5 flex items-center justify-between gap-1.5">
+                        <div>
+                            <p className="text-xs sm:text-xs font-bold text-amber-950 tracking-tight leading-tight">Pending Review</p>
+                            <p className="text-lg sm:text-2xl font-bold text-amber-700 mt-1 leading-none">
+                                {statusCounts.Pending}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-amber-700/80 font-medium mt-1">
+                                {statusCounts.Pending > 0 ? "Needs Action" : "All Clear"}
+                            </p>
+                        </div>
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-amber-100/90 border border-amber-300 text-amber-700 font-bold text-sm sm:text-lg flex items-center justify-center shrink-0 shadow-2xs">⏳</div>
+                    </div>
+                </Card>
+
+                <Card
                     onClick={() => setFilterStatus('Admitted')}
-                />
-                <StatCard
-                    title="Rejected"
-                    value={statusCounts.Rejected}
-                    icon={<span className="text-xl">❌</span>}
-                    color="red"
-                    active={filterStatus === 'Rejected'}
+                    className={`!p-0 cursor-pointer transition-all shadow-2xs ${filterStatus === 'Admitted'
+                        ? '!bg-gradient-to-r !from-emerald-100/90 !to-white !border-emerald-400 !border-l-[4px] !border-l-emerald-600 ring-2 ring-emerald-200'
+                        : '!bg-gradient-to-r !from-emerald-50/90 !via-emerald-50/40 !to-white !border-emerald-200/90 !border-l-[4px] !border-l-emerald-600 hover:!border-emerald-400'
+                        }`}
+                >
+                    <div className="p-2.5 sm:p-3.5 flex items-center justify-between gap-1.5">
+                        <div>
+                            <p className="text-xs sm:text-xs font-bold text-emerald-950 tracking-tight leading-tight">Admitted</p>
+                            <p className="text-lg sm:text-2xl font-bold text-emerald-700 mt-1 leading-none">
+                                {statusCounts.Admitted}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-emerald-700/80 font-medium mt-1">Approved entries</p>
+                        </div>
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-100/90 border border-emerald-300 text-emerald-700 font-bold text-sm sm:text-lg flex items-center justify-center shrink-0 shadow-2xs">🎉</div>
+                    </div>
+                </Card>
+
+                <Card
                     onClick={() => setFilterStatus('Rejected')}
-                />
+                    className={`!p-0 cursor-pointer transition-all shadow-2xs ${filterStatus === 'Rejected'
+                        ? '!bg-gradient-to-r !from-rose-100/90 !to-white !border-rose-400 !border-l-[4px] !border-l-rose-500 ring-2 ring-rose-200'
+                        : '!bg-gradient-to-r !from-rose-50/90 !via-rose-50/40 !to-white !border-rose-200/90 !border-l-[4px] !border-l-rose-500 hover:!border-rose-400'
+                        }`}
+                >
+                    <div className="p-2.5 sm:p-3.5 flex items-center justify-between gap-1.5">
+                        <div>
+                            <p className="text-xs sm:text-xs font-bold text-rose-950 tracking-tight leading-tight">Rejected</p>
+                            <p className="text-lg sm:text-2xl font-bold text-rose-700 mt-1 leading-none">
+                                {statusCounts.Rejected}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-rose-700/80 font-medium mt-1">Declined entries</p>
+                        </div>
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-rose-100/90 border border-rose-300 text-rose-700 font-bold text-sm sm:text-lg flex items-center justify-center shrink-0 shadow-2xs">❌</div>
+                    </div>
+                </Card>
             </div>
 
-            {/* Filters & Content */}
-            <Card variant="elevated" className="border-slate-200 shadow-md">
-                <div className="flex flex-col md:flex-row gap-4 mb-6">
-                    {/* Search */}
-                    <div className="flex-1">
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-                            <input
-                                type="text"
-                                placeholder="Search by name, ID, or class..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all placeholder:text-slate-400"
-                            />
-                        </div>
+            {/* Applications Table Card */}
+            <Card variant="elevated">
+                {/* Search Bar */}
+                <div className="mb-3">
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+                        <input
+                            type="text"
+                            placeholder="Search by student name, App No, or class..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-400"
+                        />
                     </div>
-
-                    {/* Additional View Options (Could go here) */}
                 </div>
 
-                {/* Applications List */}
-                {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-100">
-                    <table className="min-w-full divide-y divide-slate-100">
-                        <thead className="bg-slate-50/50">
-                            <tr>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">App Details</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Candidate Info</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Class</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Applied Date</th>
-                                <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-slate-50">
-                            {filteredApplications.length > 0 ? (
-                                filteredApplications.map((app) => (
-                                    <tr key={app.id} className="hover:bg-cyan-50/30 transition-colors group">
-                                        <td className="px-6 py-4">
-                                            <span className="text-sm font-bold text-slate-700 block">#{app.application_no}</span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-slate-800">{app.student_name}</span>
-                                                <span className="text-xs text-slate-500 mt-0.5">F: {app.father_name} • 📞 {app.phone}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                                            <span className="px-2 py-1 bg-slate-100 rounded text-xs font-bold">Class {app.class}</span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                                            <div>{new Date(app.applied_date).toLocaleDateString('en-GB')}</div>
-                                            <div className="text-xs text-slate-400">
-                                                {app.created_at ? new Date(app.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : ''}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            <Badge variant={getStatusBadge(app.status)}>
-                                                {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                                                <Button
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    onClick={() => navigate(`/admission/applications/${app.id}`)}
-                                                    className="hover:border-blue-300 hover:text-blue-600"
-                                                >
-                                                    View
-                                                </Button>
-                                                <button
-                                                    onClick={() => handleDelete(app.id)}
-                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                    title="Delete Application"
-                                                >
-                                                    ❌
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan="6" className="px-6 py-12 text-center text-slate-400">
-                                        {applications.length === 0 ? 'No applications yet. Create your first application!' : 'No applications found matching your criteria'}
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Mobile Card View */}
-                <div className="md:hidden space-y-3">
-                    {filteredApplications.length > 0 ? (
-                        filteredApplications.map((app) => (
-                            <div
-                                key={app.id}
-                                className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm active:scale-[0.99] transition-transform"
-                                onClick={() => navigate(`/admission/applications/${app.id}`)}
-                            >
-                                <div className="flex items-center justify-between mb-3">
-                                    <span className="text-xs font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded">#{app.application_no}</span>
-                                    <Badge variant={getStatusBadge(app.status)} size="sm">
-                                        {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                                    </Badge>
-                                </div>
-
-                                <div className="space-y-1 mb-3">
-                                    <h3 className="text-lg font-bold text-slate-800">{app.student_name}</h3>
-                                    <p className="text-sm text-slate-600">
-                                        Class {app.class} • {new Date(app.applied_date).toLocaleDateString('en-GB')}
-                                    </p>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-lg mb-4">
-                                    <div>
-                                        <span className="block font-bold text-slate-400 uppercase text-[10px]">Father</span>
-                                        {app.father_name}
-                                    </div>
-                                    <div>
-                                        <span className="block font-bold text-slate-400 uppercase text-[10px]">Contact</span>
-                                        {app.phone}
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        className="flex-1 justify-center"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            navigate(`/admission/applications/${app.id}`);
-                                        }}
-                                    >
-                                        View Details
-                                    </Button>
-                                    <button
-                                        className="px-4 py-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDelete(app.id);
-                                        }}
-                                    >
-                                        🗑️
-                                    </button>
-                                </div>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="text-center py-12 text-slate-400">
-                            No applications found
-                        </div>
-                    )}
-                </div>
+                <Table
+                    columns={columns}
+                    data={filteredApplications}
+                    isLoading={loading}
+                    compact={true}
+                    headerBg="bg-slate-100/90 text-slate-700 font-extrabold"
+                    emptyMessage="No applications found matching criteria."
+                />
             </Card>
         </div>
     );

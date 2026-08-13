@@ -553,7 +553,13 @@ router.get('/students', async (req, res) => {
                 fr.last_payment_date,
                 fr.status as fee_status,
                 fr.academic_year,
-                fs_agg.max_total_fee as structure_total_fee
+                fs_agg.max_total_fee as structure_total_fee,
+                sfd.id as discount_id,
+                sfd.discount_type,
+                sfd.discount_value,
+                sfd.reason as discount_reason,
+                sfd.notes as discount_notes,
+                sfd.applicable_months
             FROM students s
             LEFT JOIN users u ON s.user_id = u.id
             LEFT JOIN classes c ON s.class = c.class_number AND c.school_id = ?
@@ -564,10 +570,11 @@ router.get('/students', async (req, res) => {
                 FROM fee_structures 
                 GROUP BY class_id, school_id
             ) fs_agg ON c.id = fs_agg.class_id AND fs_agg.school_id = ?
+            LEFT JOIN student_fee_discounts sfd ON s.id = sfd.student_id AND sfd.school_id = ?
             WHERE s.school_id = ?
         `;
 
-        const params = [schoolId, schoolId, schoolId, schoolId, schoolId];
+        const params = [schoolId, schoolId, schoolId, schoolId, schoolId, schoolId];
 
         // Apply Filters
         if (classFilter) {
@@ -614,6 +621,13 @@ router.get('/students', async (req, res) => {
                     pending_amount: 0,
                     fee_status: 'paid',
                     structure_total_fee: row.structure_total_fee ? Number(row.structure_total_fee) : 0,
+                    // Discount info
+                    discount_id: row.discount_id || null,
+                    discount_type: row.discount_type || null,
+                    discount_value: row.discount_value ? Number(row.discount_value) : 0,
+                    discount_reason: row.discount_reason || null,
+                    discount_notes: row.discount_notes || null,
+                    applicable_months: row.applicable_months || null,
                     // We will aggregate fee types here
                     fee_types_map: new Map(),
                     processed_fr_ids: new Set(), // Track processed fee_record IDs to avoid duplicates
@@ -688,8 +702,21 @@ router.get('/students', async (req, res) => {
                     s.total_amount = s.structure_total_fee;
                 }
 
-                // Recalculate Student Pending from aggregated records
-                s.pending_amount = s.total_amount - s.paid_amount;
+                // Apply discount to compute effective total
+                let discountAmount = 0;
+                if (s.discount_value && s.discount_value > 0 && s.total_amount > 0) {
+                    if (s.discount_type === 'percentage') {
+                        discountAmount = Math.round((s.total_amount * s.discount_value) / 100);
+                    } else {
+                        // flat amount discount
+                        discountAmount = Math.min(s.discount_value, s.total_amount);
+                    }
+                }
+                s.discount_amount = discountAmount;
+                s.effective_total = s.total_amount - discountAmount;
+
+                // Recalculate Student Pending from effective total (after discount)
+                s.pending_amount = s.effective_total - s.paid_amount;
 
                 if (s.pending_amount > 0) {
                     s.fee_status = 'pending';
@@ -697,10 +724,23 @@ router.get('/students', async (req, res) => {
                     s.fee_status = 'paid';
                 }
             } else if (s.needs_fee_record) {
-                // Already handled in else block above (has structure but no record)
+                // Apply discount even when there is a structure but no fee records
+                let discountAmount = 0;
+                if (s.discount_value && s.discount_value > 0 && s.total_amount > 0) {
+                    if (s.discount_type === 'percentage') {
+                        discountAmount = Math.round((s.total_amount * s.discount_value) / 100);
+                    } else {
+                        discountAmount = Math.min(s.discount_value, s.total_amount);
+                    }
+                }
+                s.discount_amount = discountAmount;
+                s.effective_total = s.total_amount - discountAmount;
+                s.pending_amount = s.effective_total - s.paid_amount;
             } else {
                 // No fee structure and no fee records - show as 'not_available'
                 s.fee_status = 'not_available';
+                s.discount_amount = 0;
+                s.effective_total = 0;
             }
 
             delete s.fee_types_map;
@@ -709,7 +749,31 @@ router.get('/students', async (req, res) => {
             return s;
         });
 
-        res.json({ success: true, students: processedStudents });
+        // Fetch school fee_collection_cycle
+        const [schools] = await db.query(
+            'SELECT fee_collection_cycle FROM schools WHERE id = ?',
+            [schoolId]
+        );
+        const feeCollectionCycle = schools[0]?.fee_collection_cycle || 'monthly';
+
+        // Finalize student pending_amount & fee_status based on feeCollectionCycle
+        processedStudents.forEach(s => {
+            if (feeCollectionCycle === 'monthly' && s.total_amount > 0) {
+                let monthsCount = 12;
+                if (s.applicable_months) {
+                    try {
+                        const parsed = typeof s.applicable_months === 'string' ? JSON.parse(s.applicable_months) : s.applicable_months;
+                        if (Array.isArray(parsed) && parsed.length > 0) monthsCount = parsed.length;
+                    } catch (e) {}
+                }
+                const annualNet = (s.effective_total || s.total_amount) * monthsCount;
+                const paid = parseFloat(s.paid_amount || 0);
+                s.pending_amount = Math.max(0, annualNet - paid);
+                s.fee_status = s.pending_amount > 0 ? 'pending' : 'paid';
+            }
+        });
+
+        res.json({ success: true, students: processedStudents, feeCollectionCycle });
 
     } catch (error) {
         console.error('Fetch students error:', error);

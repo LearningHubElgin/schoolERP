@@ -2537,7 +2537,7 @@ router.post('/manage-students', studentPermissionMiddleware, async (req, res) =>
                 return res.status(400).json({ success: false, message: 'Roll Number already exists in this class and section' });
             }
 
-            await connection.query(
+            const [studentResult] = await connection.query(
                 `INSERT INTO students 
                  (user_id, student_unique_id, student_name, email, phone, roll_no, class, section, stream_id, father_name, mother_name, father_phone, mother_phone, address, date_of_birth, gender, blood_group, medical_conditions, admission_date, school_id, created_by)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, ?)`,
@@ -2546,7 +2546,7 @@ router.post('/manage-students', studentPermissionMiddleware, async (req, res) =>
 
             await connection.commit();
             connection.release();
-            res.status(201).json({ success: true, message: 'Student created successfully' });
+            res.status(201).json({ success: true, message: 'Student created successfully', studentId: studentResult.insertId });
         } catch (error) {
             await connection.rollback();
             connection.release();

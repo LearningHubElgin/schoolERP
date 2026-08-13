@@ -75,7 +75,7 @@ const getDisplayColumns = (templateConfig, marksList) => {
 
     if (cfg && cfg.customColumns && Array.isArray(cfg.customColumns) && cfg.customColumns.length > 0) {
         const builtIn = cfg.marksColumns ? Object.entries(cfg.marksColumns)
-            .filter(([_, v]) => v && v.enabled)
+            .filter(([k, v]) => v && v.enabled && k !== 'grade')
             .map(([k, v]) => ({ key: k === 'subject' ? 'subject' : k, label: v.label, order: v.order || 99 })) : [];
 
         const custom = cfg.customColumns
@@ -83,11 +83,6 @@ const getDisplayColumns = (templateConfig, marksList) => {
             .map(c => ({ key: c.key, label: c.label, isCustom: true, order: c.order || 99 }));
 
         cols = [...builtIn, ...custom].sort((a, b) => (a.order || 99) - (b.order || 99));
-
-        // Always ensure Grade column is included if configured in summary or enabled
-        if (cfg.summary?.showGrade && !cols.some(c => c.key === 'grade')) {
-            cols.push({ key: 'grade', label: 'Grade', order: 100 });
-        }
     } else {
         const foundKeysMap = new Map();
         (marksList || []).forEach(m => {
@@ -98,7 +93,7 @@ const getDisplayColumns = (templateConfig, marksList) => {
                 }
                 if (cm && typeof cm === 'object') {
                     Object.keys(cm).forEach(k => {
-                        if (!foundKeysMap.has(k) && k !== 'marks_obtained' && k !== 'total' && k !== 'total_marks') {
+                        if (!foundKeysMap.has(k) && k !== 'marks_obtained' && k !== 'total' && k !== 'total_marks' && k !== 'grade') {
                             const lbl = labelMap[k] || (k.startsWith('custom_') ? k.replace(/^custom_\d+/, '').replace(/^custom_/, '').replace(/_/g, ' ') : k);
                             foundKeysMap.set(k, { key: k, label: lbl || k, isCustom: true, order: 10 });
                         }
@@ -111,22 +106,20 @@ const getDisplayColumns = (templateConfig, marksList) => {
         if (custom.length > 0) {
             cols = [
                 { key: 'subject', label: 'Subject', order: 1 },
-                ...custom,
-                { key: 'grade', label: 'Grade', order: 100 }
+                ...custom
             ];
         } else {
             cols = [
                 { key: 'subject', label: 'Subject', order: 1 },
                 { key: 'max_marks', label: 'Max Marks', order: 2 },
-                { key: 'marks_obtained', label: 'Marks Obtained', order: 3 },
-                { key: 'grade', label: 'Grade', order: 4 }
+                { key: 'marks_obtained', label: 'Marks Obtained', order: 3 }
             ];
         }
     }
 
     const uniqueMap = new Map();
     cols.forEach(c => {
-        if (!uniqueMap.has(c.key)) uniqueMap.set(c.key, c);
+        if (c.key !== 'grade' && !uniqueMap.has(c.key)) uniqueMap.set(c.key, c);
     });
 
     return Array.from(uniqueMap.values());
@@ -522,33 +515,12 @@ const StudentMarksheets = () => {
                                                     })}
                                                 </tr>
                                             ))}
-                                            <tr style={{ background: '#191970' }}>
-                                                <td style={{ padding: '10px 12px', color: '#fff', fontWeight: 'bold', fontSize: '13px', textAlign: 'center' }}>-</td>
-                                                {displayCols.map((col, cIdx) => {
-                                                    let totalCell = '';
-                                                    if (col.key === 'subject') totalCell = 'TOTAL';
-                                                    else if (col.key === 'max_marks') totalCell = previewTotalMax;
-                                                    else if (col.key === 'marks_obtained') totalCell = previewTotalObtained;
-                                                    else if (col.key === 'percentage') totalCell = `${previewPercentage.toFixed(1)}%`;
-                                                    else totalCell = '-';
 
-                                                    return (
-                                                        <td key={`tot_${col.key}_${cIdx}`} style={{ padding: '10px 12px', color: '#fff', fontWeight: 'bold', fontSize: '13px', textAlign: col.key === 'subject' ? 'left' : 'center' }}>
-                                                            {totalCell}
-                                                        </td>
-                                                    );
-                                                })}
-                                            </tr>
                                         </tbody>
                                     </table>
                                 </div>
 
-                                <div style={{ display: 'flex', justifyContent: 'center', gap: '40px', padding: '14px 20px', fontSize: '15px', fontWeight: 'bold' }}>
-                                    <span>Percentage: {previewPercentage.toFixed(1)}%</span>
-                                    <span style={{ color: previewResult === 'PASS' ? '#16a34a' : '#dc2626' }}>
-                                        Result: {previewResult === 'PASS' ? '✅' : '❌'} {previewResult}
-                                    </span>
-                                </div>
+
 
                                 <div style={{ textAlign: 'center', borderTop: '1px solid #e2e8f0', padding: '12px 20px', fontSize: '10px', color: '#94a3b8', fontStyle: 'italic' }}>
                                     This is a computer generated marksheet. Signature not required. • Generated on: {new Date().toLocaleDateString('en-IN')}

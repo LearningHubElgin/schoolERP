@@ -171,6 +171,7 @@ router.post('/schools', async (req, res) => {
             website,
             subscription_plan,
             subscription_end,
+            fee_collection_cycle,
             admin_email,
             admin_password
         } = req.body;
@@ -178,6 +179,8 @@ router.post('/schools', async (req, res) => {
         if (!name) {
             return res.status(400).json({ success: false, message: 'School Name is required' });
         }
+
+
 
         if (admin_email && admin_email.trim()) {
             const [existingUser] = await db.query('SELECT id FROM users WHERE email = ?', [admin_email.trim()]);
@@ -187,11 +190,9 @@ router.post('/schools', async (req, res) => {
         }
 
         // 1. Generate unique school code
-        // Clean name of special characters and spaces
         const cleanName = name.toUpperCase().replace(/[^A-Z]/g, '').substring(0, 3);
         let schoolCode = cleanName || 'SCH';
         
-        // Ensure school code is unique
         let codeSuffix = 1;
         let finalCode = `${schoolCode}${codeSuffix.toString().padStart(2, '0')}`;
         
@@ -209,8 +210,8 @@ router.post('/schools', async (req, res) => {
             INSERT INTO schools (
                 code, name, address, city, state, pincode, phone, email, logo,
                 principal_name, established_year, board, website, 
-                subscription_plan, subscription_start, subscription_end, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_DATE, ?, 'active')
+                subscription_plan, subscription_start, subscription_end, fee_collection_cycle, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_DATE, ?, ?, 'active')
         `, [
             finalCode,
             name,
@@ -226,7 +227,8 @@ router.post('/schools', async (req, res) => {
             board || null,
             website || null,
             subscription_plan || 'basic',
-            subscription_end || null
+            subscription_end || null,
+            fee_collection_cycle || 'monthly'
         ]);
 
         const schoolId = schoolResult.insertId;
@@ -294,7 +296,7 @@ router.put('/schools/:id', async (req, res) => {
         const schoolId = req.params.id;
         const { 
             name, address, city, state, pincode, established_year, website,
-            status, subscription_plan, subscription_end, board, principal_name, phone, email, logo,
+            status, subscription_plan, subscription_end, fee_collection_cycle, board, principal_name, phone, email, logo,
             admin_email, admin_password
         } = req.body;
 
@@ -347,6 +349,7 @@ router.put('/schools/:id', async (req, res) => {
         if (status) { updates.push('status = ?'); params.push(status); }
         if (subscription_plan) { updates.push('subscription_plan = ?'); params.push(subscription_plan); }
         if (subscription_end !== undefined) { updates.push('subscription_end = ?'); params.push(subscription_end || null); }
+        if (fee_collection_cycle) { updates.push('fee_collection_cycle = ?'); params.push(fee_collection_cycle); }
         if (board) { updates.push('board = ?'); params.push(board); }
         if (principal_name !== undefined) { updates.push('principal_name = ?'); params.push(principal_name || null); }
         if (phone !== undefined) { updates.push('phone = ?'); params.push(phone || null); }
