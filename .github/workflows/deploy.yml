@@ -1,0 +1,71 @@
+name: Deploy Frontend to GoDaddy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy Frontend to GoDaddy
+        env:
+          GODADDY_HOST: ${{ secrets.GODADDY_HOST }}
+          GODADDY_USER: ${{ secrets.GODADDY_USER }}
+          GODADDY_SSH_KEY: ${{ secrets.GODADDY_SSH_KEY }}
+
+        run: |
+          echo "Starting GoDaddy deployment..."
+
+          # Create SSH directory
+          mkdir -p ~/.ssh
+
+          # Save private SSH key
+          echo "$GODADDY_SSH_KEY" > ~/.ssh/github_actions
+          chmod 600 ~/.ssh/github_actions
+
+          # Add GoDaddy server to known hosts
+          ssh-keyscan -H "$GODADDY_HOST" >> ~/.ssh/known_hosts
+
+          # Connect to GoDaddy
+          ssh \
+            -i ~/.ssh/github_actions \
+            -o StrictHostKeyChecking=yes \
+            "$GODADDY_USER@$GODADDY_HOST" << 'EOF'
+
+            echo "Connected to GoDaddy successfully!"
+
+            # Go to cPanel Git repository
+            cd /home/cdjgu23h2od/repositories/schoolERP
+
+            echo "Fetching latest GitHub code..."
+
+            git fetch origin main
+
+            echo "Updating repository..."
+
+            git reset --hard origin/main
+
+            echo "Installing dependencies..."
+
+            npm ci
+
+            echo "Building frontend..."
+
+            export VITE_API_URL_PROD="https://sc.learninghub.ind.in"
+
+            npm run build
+
+            echo "Removing old frontend files..."
+
+            rm -rf /home/cdjgu23h2od/public_html/luhs.learninghub.ind.in/*
+
+            echo "Copying new frontend..."
+
+            cp -R dist/. /home/cdjgu23h2od/public_html/luhs.learninghub.ind.in/
+
+            echo "Frontend deployment completed successfully!"
+
+          EOF
