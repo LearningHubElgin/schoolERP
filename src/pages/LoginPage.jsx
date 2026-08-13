@@ -218,7 +218,7 @@ const LoginPage = () => {
                         <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 shadow-xl hover:bg-white/15 transition-all">
                             <div className="w-8 h-8 rounded-lg bg-emerald-400/20 flex items-center justify-center text-lg mb-2">📊</div>
                             <h3 className="text-sm font-bold text-white tracking-wide">Attendance</h3>
-                            <p className="text-xs text-teal-100/75 mt-0.5">Real-time tracking & reports</p>
+                            <p className="text-xs text-teal-100/75 mt-0.5">Real-time tracking</p>
                         </div>
                         <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 shadow-xl hover:bg-white/15 transition-all">
                             <div className="w-8 h-8 rounded-lg bg-teal-400/20 flex items-center justify-center text-lg mb-2">💳</div>
