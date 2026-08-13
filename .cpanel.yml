@@ -1,0 +1,8 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/cdjgu23h2od/public_html/luhs.learninghub.in/
+    - export VITE_API_URL_PROD="https://sc.learninghub.in"
+    - npm ci
+    - npm run build
+    - /bin/cp -R dist/. $DEPLOYPATH
