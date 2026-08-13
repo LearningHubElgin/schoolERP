@@ -22,29 +22,32 @@ jobs:
           # Create SSH directory
           mkdir -p ~/.ssh
 
-          # Save private SSH key
+          # Save GoDaddy private SSH key
           echo "$GODADDY_SSH_KEY" > ~/.ssh/github_actions
           chmod 600 ~/.ssh/github_actions
 
           # Add GoDaddy server to known hosts
           ssh-keyscan -H "$GODADDY_HOST" >> ~/.ssh/known_hosts
 
-          # Connect to GoDaddy
+          echo "Connecting to GoDaddy..."
+
+          # Connect to GoDaddy using the authorized SSH key
           ssh \
             -i ~/.ssh/github_actions \
+            -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
             "$GODADDY_USER@$GODADDY_HOST" << 'EOF'
 
             echo "Connected to GoDaddy successfully!"
 
-            # Go to cPanel Git repository
+            # Go to existing cPanel Git repository
             cd /home/cdjgu23h2od/repositories/schoolERP
 
-            echo "Fetching latest GitHub code..."
+            echo "Fetching latest code from GitHub..."
 
             git fetch origin main
 
-            echo "Updating repository..."
+            echo "Updating repository to latest main..."
 
             git reset --hard origin/main
 
@@ -62,10 +65,10 @@ jobs:
 
             rm -rf /home/cdjgu23h2od/public_html/luhs.learninghub.ind.in/*
 
-            echo "Copying new frontend..."
+            echo "Copying new frontend files..."
 
             cp -R dist/. /home/cdjgu23h2od/public_html/luhs.learninghub.ind.in/
 
-            echo "Frontend deployment completed successfully!"
+            echo "Deployment completed successfully!"
 
           EOF
