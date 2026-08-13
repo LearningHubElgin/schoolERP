@@ -6,3 +6,4 @@ deployment:
     - npm ci
     - npm run build
     - /bin/cp -R dist/. $DEPLOYPATH
+    
